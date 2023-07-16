@@ -73,22 +73,22 @@ int main(int argc, char** argv)
 	layersNeuronCount.insert(layersNeuronCount.begin(), trainDataCols); // adding input layer
 	layersNeuronCount.push_back(OUTPUT_LAYER_SIZE); // adding output layer
 
-	vector<vector<double>> nonStaticNeuronLayersPotentials; // all layers except the input layer
+	vector<vector<double>> nonStaticNeuronLayersPotentials(layersNeuronCount.size() - 1, vector<double>()); // all layers except the input layer
 	for (size_t i = 1; i < layersNeuronCount.size(); i++)
-		nonStaticNeuronLayersPotentials.push_back(vector<double>(layersNeuronCount[i]));
+		nonStaticNeuronLayersPotentials[i - 1].resize(layersNeuronCount[i]);
 
-	vector<vector<double>> nonStaticNeuronLayersOutputs; // potentials after applying activation function
+	vector<vector<double>> nonStaticNeuronLayersOutputs(layersNeuronCount.size() - 1, vector<double>()); // potentials after applying activation function
 	for (size_t i = 1; i < layersNeuronCount.size(); i++)
-		nonStaticNeuronLayersOutputs.push_back(vector<double>(layersNeuronCount[i]));
+		nonStaticNeuronLayersOutputs[i - 1].resize(layersNeuronCount[i]);
 
 	vector<Matrix> weights = initWeights(layersNeuronCount, INIT_HE); // initialize weights
 
-	vector<vector<double>> biases; //initialize biases
+	vector<vector<double>> biases(layersNeuronCount.size() - 1, vector<double>()); //initialize biases
 	for (size_t i = 1; i < layersNeuronCount.size(); i++)
-		biases.push_back(vector<double>(layersNeuronCount[i], biasInitVal));
+		biases[i-1].resize(layersNeuronCount[i], biasInitVal);
 
 	vector<Matrix> weightChangeSum(weights); // accumulates over 1 batch
-	vector<vector<double>> biasChangeSum(biases); // accumulates over 1 batch  TODO: check if this is correct
+	vector<vector<double>> biasChangeSum(biases); // accumulates over 1 batch 
 
 	vector<int> shuffleMap(evaluationOffset); //used to shuffle the training data, maps only to training examples before evaluationOffset
 	iota(shuffleMap.begin(), shuffleMap.end(), 0);
@@ -119,8 +119,7 @@ int main(int argc, char** argv)
 			learningRate = 0.0005;
 		}
 
-		/* Getting number of milliseconds as an integer. */
-		auto epoch_int = duration_cast<milliseconds>(epoch2 - epoch1);
+		auto epoch_int = duration_cast<milliseconds>(epoch2 - epoch1); // getting number of milliseconds
 		auto runTime = duration_cast<milliseconds>(epoch2 - runStart);
 		epoch1 = high_resolution_clock::now();
 		runTimeD = ((double)runTime.count()) / 60000;
@@ -133,7 +132,7 @@ int main(int argc, char** argv)
 				for (vector<double>& v1 : layer.data)
 					fill(v1.begin(), v1.end(), 0);
 
-			for (vector<double>& v1 : biasChangeSum)
+			for (vector<double>& v1 : biasChangeSum) // reset before each batch
 				fill(v1.begin(), v1.end(), 0);
 
 			for (size_t batchNum = 0; batchNum < batchSize; batchNum++) {
