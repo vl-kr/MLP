@@ -53,7 +53,7 @@ Matrix Matrix::Transpose() {
 	return newMatrix;
 }
 
-void Matrix::AddMatrix(Matrix MatrixB) {
+void Matrix::AddMatrix(const Matrix& MatrixB) {
 	assert(this->cols == MatrixB.cols && this->rows == MatrixB.rows);
 #pragma omp parallel for
 	for (size_t row = 0; row < this->rows; row++) {
@@ -63,7 +63,7 @@ void Matrix::AddMatrix(Matrix MatrixB) {
 	}
 }
 
-Matrix Matrix::_AddMatrices(Matrix& MatrixA, Matrix& MatrixB) {
+Matrix Matrix::_AddMatrices(const Matrix& MatrixA, const Matrix& MatrixB) {
 	Matrix newMatrix = Matrix();
 	assert(MatrixA.cols == MatrixB.cols && MatrixA.rows == MatrixB.rows);
 	for (size_t row = 0; row < MatrixA.rows; row++) {
@@ -87,7 +87,7 @@ void Matrix::MultiplyByScalar(int scalar) {
 	}
 }
 
-Matrix Matrix::_MultiplyMatrixByScalar(Matrix& MatrixA, int scalar) {
+Matrix Matrix::_MultiplyMatrixByScalar(const Matrix& MatrixA, int scalar) {
 	vector<vector<double>> data(MatrixA.rows, vector<double>(MatrixA.cols));
 	Matrix newMatrix = Matrix();
 	for (size_t row = 0; row < MatrixA.rows; row++) {
@@ -102,7 +102,7 @@ Matrix Matrix::_MultiplyMatrixByScalar(Matrix& MatrixA, int scalar) {
 	return newMatrix;
 }
 
-Matrix Matrix::_MultiplyMatrices(Matrix& MatrixA, Matrix& MatrixB) {
+Matrix Matrix::_MultiplyMatrices(const Matrix& MatrixA, const Matrix& MatrixB) {
 	Matrix newMatrix = Matrix();
 	assert(MatrixA.cols == MatrixB.rows);
 	for (vector<double> rowA : MatrixA.data) {
@@ -122,7 +122,7 @@ Matrix Matrix::_MultiplyMatrices(Matrix& MatrixA, Matrix& MatrixB) {
 }
 
 
-Matrix Matrix::MultiplyMatricesParallel(Matrix& MatrixA, Matrix& MatrixB) {
+Matrix Matrix::MultiplyMatricesParallel(const Matrix& MatrixA, const Matrix& MatrixB) {
 	assert(MatrixA.cols == MatrixB.rows);
 	vector<vector<double>> data(MatrixA.rows, vector<double>(MatrixB.cols));
 	size_t rowA;
@@ -137,7 +137,7 @@ Matrix Matrix::MultiplyMatricesParallel(Matrix& MatrixA, Matrix& MatrixB) {
 	return Matrix(data);
 }
 
-Matrix Matrix::MultiplyMatricesParallel(Matrix& MatrixA, vector<double>& VectorB, bool transposeVector) {
+Matrix Matrix::MultiplyMatricesParallel(const Matrix& MatrixA, const vector<double>& VectorB, bool transposeVector) {
 	assert(MatrixA.cols == VectorB.size());
 	Matrix MatrixB = Matrix::VectorToMatrix(VectorB, transposeVector);
 	vector<vector<double>> data(MatrixA.rows, vector<double>(MatrixB.cols));
@@ -153,7 +153,7 @@ Matrix Matrix::MultiplyMatricesParallel(Matrix& MatrixA, vector<double>& VectorB
 	return Matrix(data);
 }
 
-Matrix Matrix::VectorToMatrix(vector<double>& vect, bool transposeVector) {
+Matrix Matrix::VectorToMatrix(const vector<double>& vect, bool transposeVector) {
 	if (!transposeVector) {
 		return Matrix(vector<vector<double>>(1, vect));
 	}
@@ -162,6 +162,19 @@ Matrix Matrix::VectorToMatrix(vector<double>& vect, bool transposeVector) {
 		data[i][0] = vect[i];
 	}
 	return Matrix(data);
+}
+
+vector<double> Matrix::MultiplyMatrixByVector(const Matrix& MatrixA, const vector<double>& VectorB) {
+	assert(MatrixA.cols == VectorB.size());
+	vector<double> data(MatrixA.rows);
+	size_t rowA;
+#pragma omp parallel for
+	for (rowA = 0; rowA < MatrixA.rows; rowA++) {
+		for (size_t colA_rowB = 0; colA_rowB < MatrixA.cols; colA_rowB++) {
+			data[rowA] += MatrixA.data[rowA][colA_rowB] * VectorB[colA_rowB];
+		}
+	}
+	return data;
 }
 
 Matrix Matrix::RandomMatrix(size_t maxRows, size_t maxCols, int maxVal) {
@@ -191,7 +204,7 @@ Matrix Matrix::RandomMatrixSetSize(size_t rows, size_t cols, double variance) { 
 	return Matrix(data);
 }
 
-bool Matrix::MatricesEqual(Matrix& MatrixA, Matrix& MatrixB) { // just for testing
+bool Matrix::MatricesEqual(const Matrix& MatrixA, const Matrix& MatrixB) { // just for testing
 	assert(MatrixA.cols == MatrixB.cols && MatrixA.rows == MatrixB.rows);
 	for (size_t row = 0; row < MatrixA.rows; row++) {
 		for (size_t col = 0; col < MatrixA.cols; col++) {
