@@ -128,12 +128,10 @@ Matrix Matrix::MultiplyMatricesParallel(Matrix& MatrixA, Matrix& MatrixB) {
 	size_t rowA;
 #pragma omp parallel for
 	for (rowA = 0; rowA < MatrixA.rows; rowA++) {
-		for (size_t colB = 0; colB < MatrixB.cols; colB++) {
-			int sum = 0;
-			for (size_t colA_rowB = 0; colA_rowB < MatrixA.cols; colA_rowB++) {
-				sum += MatrixA.data[rowA][colA_rowB] * MatrixB.data[colA_rowB][colB];
+		for (size_t colA_rowB = 0; colA_rowB < MatrixA.cols; colA_rowB++) {
+			for (size_t colB = 0; colB < MatrixB.cols; colB++) {
+				data[rowA][colB] += MatrixA.data[rowA][colA_rowB] * MatrixB.data[colA_rowB][colB];
 			}
-			data[rowA][colB] = sum;
 		}
 	}
 	return Matrix(data);
