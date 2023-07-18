@@ -137,6 +137,33 @@ Matrix Matrix::MultiplyMatricesParallel(Matrix& MatrixA, Matrix& MatrixB) {
 	return Matrix(data);
 }
 
+Matrix Matrix::MultiplyMatricesParallel(Matrix& MatrixA, vector<double>& VectorB, bool transposeVector) {
+	assert(MatrixA.cols == VectorB.size());
+	Matrix MatrixB = Matrix::VectorToMatrix(VectorB, transposeVector);
+	vector<vector<double>> data(MatrixA.rows, vector<double>(MatrixB.cols));
+	size_t rowA;
+#pragma omp parallel for
+	for (rowA = 0; rowA < MatrixA.rows; rowA++) {
+		for (size_t colA_rowB = 0; colA_rowB < MatrixA.cols; colA_rowB++) {
+			for (size_t colB = 0; colB < MatrixB.cols; colB++) {
+				data[rowA][colB] += MatrixA.data[rowA][colA_rowB] * MatrixB.data[colA_rowB][colB];
+			}
+		}
+	}
+	return Matrix(data);
+}
+
+Matrix Matrix::VectorToMatrix(vector<double>& vect, bool transposeVector) {
+	if (!transposeVector) {
+		return Matrix(vector<vector<double>>(1, vect));
+	}
+	vector<vector<double>> data(vect.size(), vector<double>(1));
+	for (size_t i = 0; i < vect.size(); i++) {
+		data[i][0] = vect[i];
+	}
+	return Matrix(data);
+}
+
 Matrix Matrix::RandomMatrix(size_t maxRows, size_t maxCols, int maxVal) {
 	size_t rows = rand() % maxRows + 1;
 	size_t cols = rand() % maxCols + 1;

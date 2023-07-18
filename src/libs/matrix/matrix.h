@@ -27,6 +27,8 @@ public:
 
 	Matrix Transpose();
 
+	static Matrix VectorToMatrix(std::vector<double>& vector, bool transposeVector);
+
 	void AddMatrix(Matrix MatrixB);
 
 	static Matrix _AddMatrices(Matrix& MatrixA, Matrix& MatrixB); //use AddMatrix instead
@@ -38,6 +40,7 @@ public:
 	static Matrix _MultiplyMatrices(Matrix& MatrixA, Matrix& MatrixB); //use MultiplyMatricesParallel instead
 
 	static Matrix MultiplyMatricesParallel(Matrix& MatrixA, Matrix& MatrixB);
+	static Matrix MultiplyMatricesParallel(Matrix& MatrixA, std::vector<double>& vectorB, bool transposeVector=true);
 
 	static Matrix RandomMatrix(size_t maxRows, size_t maxCols, int maxVal);
 
