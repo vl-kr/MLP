@@ -11,8 +11,7 @@ double getVariance(size_t n, size_t m, int weightInitMethod) {
 	m : 				number of neuron in layer k + 1
 	weightInitMethod :  either INIT_XAV or INIT_HE
 	returns variance
-	/*/
-	//assert(weightInitMethod == INIT_XAV || weightInitMethod == INIT_HE);
+	*/
 	if (weightInitMethod == INIT_XAV)
 		return sqrt(1.0 / n);
 	if (weightInitMethod == INIT_HE)
@@ -24,7 +23,6 @@ void activationFunc(vector<double>& inVect, vector<double>& outVec, int activati
 	/*
 	applies an activation function to values from inVect, and writes them into outVec
 	*/
-	//assert(activationFuncType == ACT_ReLU || activationFuncType == ACT_SOFTMAX);
 	if (activationFuncType == ACT_ReLU) {
 #pragma omp parallel for
 		for (size_t i = 0; i < size(inVect); i++) {
@@ -119,43 +117,15 @@ void updateWeights(vector<Matrix>& weightChangeSum, vector<vector<double>>& bias
 	params					:		serves as a memory for different optimization algorithms
 	method					:		decides which optimization method to use
 	*/
-	//params[0][4] += 1; // time
 	for (size_t layerIndex = 0; layerIndex < weights.size(); layerIndex++) {
 		for (size_t inputNeuronIndex = 0; inputNeuronIndex < weights[layerIndex].cols; inputNeuronIndex++) {
 			for (size_t outputNeuronIndex = 0; outputNeuronIndex < weights[layerIndex].rows; outputNeuronIndex++) {
 				double dw = weightChangeSum[layerIndex].data[outputNeuronIndex][inputNeuronIndex] / batchSize;
 				params[0][0] = (0.9 * params[0][0]) + ((0.1) * dw * dw); // RMSProp parameter
-				//params[0][1] = -(learningRate * dw) + (0.8 * params[0][1]); // momentum parameter
-
-				//params[0][2] = (0.9 * params[0][2]) + ((0.1) * dw); // adam parameter
-				//params[0][3] = (0.999 * params[0][3]) + ((0.001) * dw * dw); // adam parameter
-
-				//double mHat = params[0][2] / 1; //(1 - (pow(0.9, params[0][4]))); 
-				//double vHat = params[0][3] / 1; //(1 - (pow(0.999, params[0][4]))); 
 
 				double weightDelta;
 
-				//if(method == "vanilla")
-				//	weightDelta = -(learningRate * dw);// vanilla
-
-				//else
-				//if (method == "momentum") 
-				//	weightDelta = params[0][1]; // momentum
-
-				//else if(method == "RMS")
 				weightDelta = -((learningRate / sqrt(params[0][0] + 0.00000001)) * dw); //only RMSProp
-
-				//else if(method == "RMSW")
-				//	weightDelta = -(((learningRate / sqrt(params[0][0] + 0.00000001)) * dw) + (learningRate * 0.2 * weights[layerIndex].data[outputNeuronIndex][inputNeuronIndex])); //RMSProp + weight decay
-
-				//else if (method == "ADAM")
-				//	weightDelta = -learningRate * (((mHat) / (sqrt(vHat) + 0.00000001)));
-				//else if (method == "ADAMW")
-				//	weightDelta = -learningRate * (((mHat) / (sqrt(vHat) + 0.00000001)) + 0.01 * weights[layerIndex].data[outputNeuronIndex][inputNeuronIndex]);
-				//else {
-				//	cout << "!!!!!!!!WRONG METHOD!!!!!!" << endl;
-				//	exit(12345);
-				//}
 
 				weights[layerIndex].data[outputNeuronIndex][inputNeuronIndex] += weightDelta;
 
@@ -167,33 +137,10 @@ void updateWeights(vector<Matrix>& weightChangeSum, vector<vector<double>>& bias
 		for (size_t biasIndex = 0; biasIndex < biasChangeSum[layerIndex].size(); biasIndex++) {
 			double dw = biasChangeSum[layerIndex][biasIndex] / batchSize;
 			params[1][0] = (0.9 * params[1][0]) + ((0.1) * dw * dw); // RMSProp parameter
-			//params[1][1] = -(learningRate * dw) + (0.9 * params[0][1]); // momentum parameter
-
-			/*params[1][2] = (0.9 * params[1][2]) + ((0.1) * dw);
-			params[1][3] = (0.999 * params[1][3]) + ((0.001) * dw * dw);
-
-			double mHat = params[1][2] / (1 - (pow(0.9, params[0][4])));
-			double vHat = params[1][3] / (1 - (pow(0.999, params[0][4])));*/
 
 			double weightDelta;
 
-			//if (method == "vanilla")
-			//	weightDelta = -(learningRate * dw);// vanilla
-
-			//else 
-			//if (method == "momentum")
-			//	weightDelta = params[1][1]; // momentum
-
-			//else if (method == "RMS")
 			weightDelta = -((learningRate / sqrt(params[1][0])) * dw); //only RMSProp #2
-
-			//else if (method == "RMSW")
-			//	weightDelta = -(((learningRate / sqrt(params[1][0])) * dw) + (learningRate * 0.1 * biases[layerIndex][biasIndex])); //RMSProp + weight decay
-
-			//else if (method == "ADAM")
-			//	double weightDelta = -learningRate * (((mHat) / (sqrt(vHat) + 0.00000001)));
-			//else if (method == "ADAMW")
-			//	weightDelta = -learningRate * (((mHat) / (sqrt(vHat) + 0.00000001)) + 0.1 * biases[layerIndex][biasIndex]);
 
 			biases[layerIndex][biasIndex] += weightDelta;
 		}
@@ -211,15 +158,19 @@ double evaluateNetworkError(Matrix& testDataVectors, Matrix& testDataLabels, siz
 	nonStaticNeuronPotentials				:		inner potenials of neurons in hidden layers + output layer, passed to forwardPass()
 	nonStaticNeuronOutputs					:		outputs of neurons in hidden layers + output layer, , passed to forwardPass()
 	*/
-	//assert(testDataLabels.rows == testDataVectors.rows && testDataVectors.rows > TESTING_OFFSET);
 	double errorSum = 0;
 	for (size_t i = TESTING_OFFSET; i < testDataVectors.rows; i++) {
-		errorSum += forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, biases, activationFuncType, testDataLabels.data[i][0]);
+		int label = testDataLabels.data[i][0];
+		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, biases, activationFuncType);
+		double outputOfCorrectNeuron = nonStaticNeuronOutputs[nonStaticNeuronOutputs.size() - 1][label];
+		double loss = log(outputOfCorrectNeuron); // cross entropy
+		errorSum += loss;
 	}
 	return -(1.0 / (testDataVectors.rows - TESTING_OFFSET)) * errorSum;
 }
 
-double evaluateNetworkAccuracy(Matrix& testDataVectors, Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType) {
+double evaluateNetworkAccuracy(Matrix& testDataVectors, Matrix& testDataLabels, size_t TESTING_OFFSET,
+	vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType) {
 	/*
 	computes accuracy for trainig examples after TESTING_OFFSET
 
@@ -229,57 +180,42 @@ double evaluateNetworkAccuracy(Matrix& testDataVectors, Matrix& testDataLabels, 
 	nonStaticNeuronPotentials				:		inner potenials of neurons in hidden layers + output layer, passed to forwardPass()
 	nonStaticNeuronOutputs					:		outputs of neurons in hidden layers + output layer, , passed to forwardPass()
 	*/
-	//assert(testDataLabels.rows == testDataVectors.rows && testDataVectors.rows > TESTING_OFFSET);
 	double correct = 0;
 	for (size_t i = TESTING_OFFSET; i < testDataVectors.rows; i++) {
-		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, biases, activationFuncType, testDataLabels.data[i][0]);
-		if (vecToScalar(nonStaticNeuronOutputs.back()) == testDataLabels.data[i][0])
+		int label = testDataLabels.data[i][0];
+		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, biases, activationFuncType);
+		if (vecToScalar(nonStaticNeuronOutputs.back()) == label)
 			correct++;
 	}
 	return (correct / (testDataVectors.rows - TESTING_OFFSET));
 }
 
-double forwardPass(vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType, int label) {
+void forwardPass(vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials,
+	vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType) {
 	/*
 	performs forward pass for a single example, returns cross entropy loss
 
 	inputNeurons							:		raw input
-	nonStaticNeuronPotentials				:		inner potenials of neurons in hidden layers + output layer, passed to forwardPass()
-	nonStaticNeuronOutputs					:		outputs of neurons in hidden layers + output layer, passed to forwardPass()
+	nonStaticNeuronPotentials				:		inner potenials of neurons in hidden layers + output layer
+	nonStaticNeuronOutputs					:		outputs of neurons in hidden layers + output layer
 	label									:		label for this training example
+	weights									:		weights between all neurons in adjacent layers
+	biases									:		biases for all neurons
+	activationFuncType						:		activation function of neurons in hidden layers
 	*/
-	//assert(label < (int)nonStaticNeuronPotentials[nonStaticNeuronPotentials.size() - 1].size());
-	//assert(nonStaticNeuronPotentials.size() >= 2); //at least one hidden layer
-	//assert(weights.size() == nonStaticNeuronPotentials.size()); // weights.size() = number of all layers - 1;		 number of all layers = nonStaticNeuronLayers + 1
 	for (size_t layerIndex = 0; layerIndex < nonStaticNeuronPotentials.size(); layerIndex++) {
-		if (layerIndex == 0) {
-			//assert(inputNeurons.size() == weights[0].cols);
-#pragma omp parallel for
-			for (size_t neuronIndex = 0; neuronIndex < weights[0].rows; neuronIndex++) {
-				nonStaticNeuronPotentials[0][neuronIndex] = biases[layerIndex][neuronIndex];
-				for (size_t weightIndex = 0; weightIndex < weights[0].cols; weightIndex++) {
-					nonStaticNeuronPotentials[0][neuronIndex] += inputNeurons[weightIndex]/255 * weights[0].data[neuronIndex][weightIndex]; // dividing by 255 for normalization
-				}
-			}
+		vector<double>* prevLayerOutputs = &inputNeurons;
+		if (layerIndex > 0) {
+			prevLayerOutputs = &nonStaticNeuronOutputs[layerIndex - 1];
 		}
-		else {
-			//assert(nonStaticNeuronPotentials[layerIndex - 1].size() == weights[layerIndex].cols);
-#pragma omp parallel for
-			for (size_t neuronIndex = 0; neuronIndex < weights[layerIndex].rows; neuronIndex++) {
-				nonStaticNeuronPotentials[layerIndex][neuronIndex] = biases[layerIndex][neuronIndex];
-				for (size_t weightIndex = 0; weightIndex < weights[layerIndex].cols; weightIndex++) {
-					nonStaticNeuronPotentials[layerIndex][neuronIndex] += nonStaticNeuronOutputs[layerIndex - 1][weightIndex] * weights[layerIndex].data[neuronIndex][weightIndex];
-				}
-			}
-		}
+		nonStaticNeuronPotentials[layerIndex] = Matrix::MultiplyMatrixByVector(weights[layerIndex], *prevLayerOutputs);
+
 		if (layerIndex == nonStaticNeuronPotentials.size() - 1)
 			activationFunc(nonStaticNeuronPotentials[layerIndex], nonStaticNeuronOutputs[layerIndex], ACT_SOFTMAX); //softmax for output layer
 		else
 			activationFunc(nonStaticNeuronPotentials[layerIndex], nonStaticNeuronOutputs[layerIndex], activationFuncType); //hidden layers
 	}
-	double n = nonStaticNeuronOutputs[nonStaticNeuronOutputs.size() - 1][label];
-	double l = log(n);
-	return l; // returns cross entropy
+	return;
 }
 
 vector<Matrix> initWeights(vector<size_t> architecture, int weightInitMethod) { //each number in architecture = number of neurons in an individual layer
