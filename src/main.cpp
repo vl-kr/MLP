@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 
 		cout << "Accuracy: " << accuracy << ", Error: " << "not calculated" << ", Runtime: " << runTimeD << " min., ms since last epoch: " << epoch_int.count() << endl;
 
-		for (size_t trainingExampleOffset = 0; trainingExampleOffset + BATCH_SIZE < evaluationOffset; trainingExampleOffset++) {
+		for (size_t trainingExampleOffset = 0; trainingExampleOffset + batchSize <= evaluationOffset; trainingExampleOffset += batchSize) {
 
 			for (Matrix& layer : weightChangeSum) // reset before each batch
 				for (vector<double>& v1 : layer.data)
@@ -136,13 +136,14 @@ int main(int argc, char** argv)
 				fill(v1.begin(), v1.end(), 0);
 
 			for (size_t batchNum = 0; batchNum < batchSize; batchNum++) {
-				forwardPass(trainDataVectors.data[shuffleMap[trainingExampleOffset]], nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, trainDataLabels.data[shuffleMap[trainingExampleOffset]][0]);
-				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, trainDataLabels.data[shuffleMap[trainingExampleOffset]][0]);
-				computeWeightChange(weightChangeSum, biasChangeSum, trainDataVectors.data[shuffleMap[trainingExampleOffset]], nonStaticNeuronLayersOutputs, weights, biases, deltas);
+				vector<double>& trainingExample = trainDataVectors.data[shuffleMap[trainingExampleOffset + batchNum]];
+				int label = trainDataLabels.data[shuffleMap[trainingExampleOffset + batchNum]][0];
 
-				trainingExampleOffset += 1;
+				forwardPass(trainingExample, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, label);
+				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, label);
+				computeWeightChange(weightChangeSum, biasChangeSum, trainingExample, nonStaticNeuronLayersOutputs, weights, biases, deltas);
 			}
-			updateWeights(weightChangeSum, biasChangeSum, weights, biases, batchSize, learningRate, params, optimizer); 
+			updateWeights(weightChangeSum, biasChangeSum, weights, biases, batchSize, learningRate, params, optimizer);
 		}
 		shuffle(shuffleMap.begin(), shuffleMap.end(), random_device());
 		epoch2 = high_resolution_clock::now();
@@ -162,7 +163,7 @@ int main(int argc, char** argv)
 		forwardPass(inputVector, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, 0);
 		outLabels.push_back(vecToScalar(nonStaticNeuronLayersOutputs.back()));
 	}
-	
+
 	writeToFile("actualPredictions", outLabels);
 
 	return 0;
