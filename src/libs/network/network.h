@@ -29,12 +29,14 @@ public:
 };
 
 
-void forwardPass(vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType);
-vector<vector<double>> computeDeltas(vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType, int label);
-void computeWeightChange(vector<Matrix>& weightChangeSum, vector<double>& inputVector, vector<vector<double>>& nonStaticNeuronOutputs, vector<vector<double>>& deltas);
-void updateWeights(vector<Matrix>& weightChangeSum, vector<Matrix>& weights, size_t batchSize, double learningRate, vector<vector<double>>& params);
-double evaluateNetworkAccuracy(Matrix& testDataVectors, Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType);
-double evaluateNetworkError(Matrix& testDataVectors, Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs,vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType);
-void activationFunc(vector<double> &inVect, vector<double>& outVec, int activationFuncType);
-double getVariance(size_t n, size_t m, int weightInitMethod);
+void forwardPass(const vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType);
+vector<vector<double>> computeDeltas(const vector<vector<double>>& nonStaticNeuronPotentials, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int label);
+void computeWeightChange(vector<Matrix>& weightChangeSum, const vector<double>& inputVector, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<vector<double>>& deltas);
+void updateWeights(const vector<Matrix>& weightChangeSum, vector<Matrix>& weights, size_t batchSize, double learningRate, vector<vector<double>>& params);
+
 vector<Matrix> initWeights(vector<size_t> architecture, int weightInitMethod, int initialBias = 0);
+double getVariance(size_t n, size_t m, int weightInitMethod);
+
+void activationFunc(const vector<double>& inVect, vector<double>& outVec, int activationFuncType);
+double evaluateNetworkAccuracy(const Matrix& testDataVectors, const Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType);
+double evaluateNetworkError(const Matrix& testDataVectors, const Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType);

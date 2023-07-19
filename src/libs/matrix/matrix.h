@@ -19,7 +19,7 @@ public:
 
 	void PrintMatrix();
 
-	Matrix Transpose(bool dropBiases = false);
+	static Matrix Transpose(const Matrix& Matrix, bool dropBiases = false);
 
 	static Matrix VectorToMatrix(const std::vector<double>& vector, bool transposeVector);
 

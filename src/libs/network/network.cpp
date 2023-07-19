@@ -19,12 +19,11 @@ double getVariance(size_t n, size_t m, int weightInitMethod) {
 	return 1;
 }
 
-void activationFunc(vector<double>& inVect, vector<double>& outVec, int activationFuncType) {
+void activationFunc(const vector<double>& inVect, vector<double>& outVec, int activationFuncType) {
 	/*
 	applies an activation function to values from inVect, and writes them into outVec
 	*/
 	if (activationFuncType == ACT_ReLU) {
-//#pragma omp parallel for
 		for (size_t i = 0; i < size(inVect); i++) {
 			outVec[i] = max(0.0, inVect[i]);
 		}
@@ -40,23 +39,21 @@ void activationFunc(vector<double>& inVect, vector<double>& outVec, int activati
 	}
 }
 
-inline double derivativeReLU(double potential) {
-	if (potential > 0)
-		return 1;
-	return 0;
-}
-
-vector<vector<double>> computeDeltas(vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType, int label) {
+vector<vector<double>> computeDeltas(const vector<vector<double>>& nonStaticNeuronPotentials, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int label) {
 	/*
 	delta is a derivative of the error function w.r.t the inner potential (dE/dy * o'(inner_potential))
 	creates a 2D matrix of deltas; one value for each neuron
+
+	nonStaticNeuronPotentials				:		inner potenials of neurons in hidden layers + output layer
+	nonStaticNeuronOutputs					:		outputs of neurons in hidden layers + output layer
+	weights									:		weights between all neurons in adjacent layers
+	label									:		label for this training example
 	*/
 	vector<vector<double>> deltas(nonStaticNeuronOutputs);
 	deltas.back()[label] -= 1; // delta for the output layer, works only for softmax with cross entropy
 
 	for (int layerIndex = nonStaticNeuronOutputs.size() - 2; layerIndex >= 0; layerIndex--) {
-		vector<double> layerDeltas(nonStaticNeuronOutputs[layerIndex].size());
-		Matrix weightsTransposed = weights[layerIndex + 1].Transpose(true);
+		Matrix weightsTransposed = Matrix::Transpose(weights[layerIndex + 1], true);
 		deltas[layerIndex] = Matrix::MultiplyMatrixByVector(weightsTransposed, deltas[layerIndex + 1]);
 		for (int neuronIndex = 0; neuronIndex < deltas[layerIndex].size(); neuronIndex++) {
 			deltas[layerIndex][neuronIndex] = nonStaticNeuronPotentials[layerIndex][neuronIndex] > 0 ? deltas[layerIndex][neuronIndex] : 0; // ReLU derivation (1 for x > 0; 0 otherwise)
@@ -65,20 +62,20 @@ vector<vector<double>> computeDeltas(vector<vector<double>>& nonStaticNeuronPote
 	return deltas;
 }
 
-void computeWeightChange(vector<Matrix>& weightChangeSum, vector<double>& inputVector, vector<vector<double>>& nonStaticNeuronOutputs, vector<vector<double>>& deltas) {
+void computeWeightChange(vector<Matrix>& weightChangeSum, const vector<double>& inputVector, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<vector<double>>& deltas) {
 	/*
 	multiplies deltas with neuron outputs to get dE/dw
 	resulting values accumulate over each batch
 
-	weightChangeSum			:		the sum of dE/dw for each training example in a batch
-	inputVector				:		neuron outputs of the input layer
-	nonStaticNeuronOutputs	:		neuron outputs of the hidden + output layers
-	deltas					:		deltas from computeDeltas
+	weightChangeSum							:		the sum of dE/dw for each training example in a batch
+	inputVector								:		neuron outputs of the input layer
+	nonStaticNeuronOutputs					:		neuron outputs of the hidden + output layers
+	deltas									:		deltas from computeDeltas
 	*/
 	int layerIndex;
 #pragma omp parallel for
 	for (layerIndex = 0; layerIndex < weightChangeSum.size(); layerIndex++) {
-		vector<double>* neuronOutputs = &inputVector;
+		const vector<double>* neuronOutputs = &inputVector;
 		if (layerIndex > 0) {
 			neuronOutputs = &nonStaticNeuronOutputs[layerIndex - 1];
 		}
@@ -87,15 +84,15 @@ void computeWeightChange(vector<Matrix>& weightChangeSum, vector<double>& inputV
 	}
 }
 
-void updateWeights(vector<Matrix>& weightChangeSum, vector<Matrix>& weights, size_t batchSize, double learningRate, vector<vector<double>>& params) {
+void updateWeights(const vector<Matrix>& weightChangeSum, vector<Matrix>& weights, size_t batchSize, double learningRate, vector<vector<double>>& params) {
 	/*
 	updates weights and applies some optimizations (most of them are commented out to save time)
 
-	weightChangeSum			:		the sum of dE/dw for each training example in a batch
-	weights					:		weights
-	batchSize				:		number of training examples in a batch
-	learningRate			: 		learning rate
-	params					:		serves as a memory for different optimization algorithms
+	weightChangeSum							:		the sum of dE/dw for each training example in a batch
+	weights									:		weights between all neurons in adjacent layers
+	batchSize								:		number of training examples in a batch
+	learningRate							: 		learning rate
+	params									:		serves as a memory for different optimization algorithms
 	*/
 	for (size_t layerIndex = 0; layerIndex < weights.size(); layerIndex++) {
 		for (size_t outputNeuronIndex = 0; outputNeuronIndex < weights[layerIndex].rows; outputNeuronIndex++) {
@@ -113,7 +110,8 @@ void updateWeights(vector<Matrix>& weightChangeSum, vector<Matrix>& weights, siz
 	}
 }
 
-double evaluateNetworkError(Matrix& testDataVectors, Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType) {
+double evaluateNetworkError(const Matrix& testDataVectors, const Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, 
+	vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType) {
 	/*
 	computes average loss for trainig examples after TESTING_OFFSET
 
@@ -122,11 +120,13 @@ double evaluateNetworkError(Matrix& testDataVectors, Matrix& testDataLabels, siz
 	TESTING_OFFSET							:		marks the index of the first evaluation example (all following examples are not trained on)
 	nonStaticNeuronPotentials				:		inner potenials of neurons in hidden layers + output layer, passed to forwardPass()
 	nonStaticNeuronOutputs					:		outputs of neurons in hidden layers + output layer, , passed to forwardPass()
+	weights									:		weights between all neurons in adjacent layers
+	activationFuncType						:		activation function of neurons in hidden layers
 	*/
 	double errorSum = 0;
 	for (size_t i = TESTING_OFFSET; i < testDataVectors.rows; i++) {
 		int label = testDataLabels.data[i][0];
-		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, biases, activationFuncType);
+		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, activationFuncType);
 		double outputOfCorrectNeuron = nonStaticNeuronOutputs[nonStaticNeuronOutputs.size() - 1][label];
 		double loss = log(outputOfCorrectNeuron); // cross entropy
 		errorSum += loss;
@@ -134,8 +134,8 @@ double evaluateNetworkError(Matrix& testDataVectors, Matrix& testDataLabels, siz
 	return -(1.0 / (testDataVectors.rows - TESTING_OFFSET)) * errorSum;
 }
 
-double evaluateNetworkAccuracy(Matrix& testDataVectors, Matrix& testDataLabels, size_t TESTING_OFFSET,
-	vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType) {
+double evaluateNetworkAccuracy(const Matrix& testDataVectors, const Matrix& testDataLabels, size_t TESTING_OFFSET,
+	vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType) {
 	/*
 	computes accuracy for trainig examples after TESTING_OFFSET
 
@@ -144,19 +144,21 @@ double evaluateNetworkAccuracy(Matrix& testDataVectors, Matrix& testDataLabels, 
 	TESTING_OFFSET							:		marks the index of the first evaluation example (all following examples are not trained on)
 	nonStaticNeuronPotentials				:		inner potenials of neurons in hidden layers + output layer, passed to forwardPass()
 	nonStaticNeuronOutputs					:		outputs of neurons in hidden layers + output layer, , passed to forwardPass()
+	weights									:		weights between all neurons in adjacent layers
+	activationFuncType						:		activation function of neurons in hidden layers
 	*/
 	double correct = 0;
 	for (size_t i = TESTING_OFFSET; i < testDataVectors.rows; i++) {
 		int label = testDataLabels.data[i][0];
-		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, biases, activationFuncType);
+		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, activationFuncType);
 		if (vecToScalar(nonStaticNeuronOutputs.back()) == label)
 			correct++;
 	}
 	return (correct / (testDataVectors.rows - TESTING_OFFSET));
 }
 
-void forwardPass(vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials,
-	vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType) {
+void forwardPass(const vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials,
+	vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType) {
 	/*
 	performs forward pass for a single example, returns cross entropy loss
 
@@ -165,20 +167,17 @@ void forwardPass(vector<double>& inputNeurons, vector<vector<double>>& nonStatic
 	nonStaticNeuronOutputs					:		outputs of neurons in hidden layers + output layer
 	label									:		label for this training example
 	weights									:		weights between all neurons in adjacent layers
-	biases									:		biases for all neurons
 	activationFuncType						:		activation function of neurons in hidden layers
 	*/
 	for (size_t layerIndex = 0; layerIndex < nonStaticNeuronPotentials.size(); layerIndex++) {
-		vector<double>* prevLayerOutputs = &inputNeurons;
+		const vector<double>* prevLayerOutputs = &inputNeurons;
 		if (layerIndex > 0) {
 			prevLayerOutputs = &nonStaticNeuronOutputs[layerIndex - 1];
 		}
 		nonStaticNeuronPotentials[layerIndex] = Matrix::MultiplyMatrixByVector(weights[layerIndex], *prevLayerOutputs, true);
 
-		if (layerIndex == nonStaticNeuronPotentials.size() - 1)
-			activationFunc(nonStaticNeuronPotentials[layerIndex], nonStaticNeuronOutputs[layerIndex], ACT_SOFTMAX); //softmax for output layer
-		else
-			activationFunc(nonStaticNeuronPotentials[layerIndex], nonStaticNeuronOutputs[layerIndex], activationFuncType); //hidden layers
+		int activationFunction = layerIndex == nonStaticNeuronPotentials.size() - 1 ? ACT_SOFTMAX : activationFuncType;
+		activationFunc(nonStaticNeuronPotentials[layerIndex], nonStaticNeuronOutputs[layerIndex], activationFunction); //softmax for output layer
 	}
 	return;
 }
@@ -191,7 +190,9 @@ vector<Matrix> initWeights(vector<size_t> architecture, int weightInitMethod, in
 	weightInitMethod						:		allows to choose between different weight initialization methods
 	initialBias								:		initial bias value for all neurons, default is 0
 	*/
-	assert(architecture.size() >= 3);
+	if (architecture.size() < 3) {
+		throw invalid_argument("Network must have at least 3 layers (at least one hidden layer)");
+	}
 	vector<Matrix> weights;
 	for (size_t i = 1; i < architecture.size(); i++) {
 		double variance = getVariance(architecture[i - 1], architecture[i], weightInitMethod);

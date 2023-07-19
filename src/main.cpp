@@ -105,8 +105,8 @@ int main(int argc, char** argv)
 
 		cout << "Epoch: " << epochCounter << endl;
 
-		//error = evaluateNetworkError(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU);
-		accuracy = evaluateNetworkAccuracy(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU);
+		//error = evaluateNetworkError(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
+		accuracy = evaluateNetworkAccuracy(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
 
 		if (accuracy > 0.86) { // adaptive learning rate
 			learningRate = 0.0001;
@@ -135,8 +135,8 @@ int main(int argc, char** argv)
 				vector<double>& trainingExample = trainDataVectors.data[shuffleMap[trainingExampleOffset + batchNum]];
 				int label = trainDataLabels.data[shuffleMap[trainingExampleOffset + batchNum]][0];
 
-				forwardPass(trainingExample, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU);
-				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, label);
+				forwardPass(trainingExample, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
+				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, label);
 				computeWeightChange(weightChangeSum, trainingExample, nonStaticNeuronLayersOutputs, deltas);
 			}
 			updateWeights(weightChangeSum, weights, batchSize, learningRate, params);
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
 	vector<double> outLabels;
 
 	for (auto& inputVector : testDataVectors.data) {
-		forwardPass(inputVector, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU);
+		forwardPass(inputVector, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
 		outLabels.push_back(vecToScalar(nonStaticNeuronLayersOutputs.back()));
 	}
 

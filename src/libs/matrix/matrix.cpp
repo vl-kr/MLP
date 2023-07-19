@@ -42,19 +42,19 @@ void Matrix::PrintMatrix() {
 	cout << endl;
 }
 
-Matrix Matrix::Transpose(bool dropBiases) {
+Matrix Matrix::Transpose(const Matrix& matrix, bool dropBiases) {
 	/*
 	return new transposed matrix
 
 	dropBiases 	:	if true, the last column of the original Matrix is ignored
 	*/
-	size_t cols = this->cols - (int)dropBiases;
-	Matrix newMatrix(vector<vector<double>>(cols, vector<double>(this->rows)));
+	int cols = matrix.cols - (int)dropBiases;
+	Matrix newMatrix(vector<vector<double>>(cols, vector<double>(matrix.rows)));
 	int row;
 #pragma omp parallel for
-for (row = 0; row < this->rows; row++) {
+for (row = 0; row < matrix.rows; row++) {
 		for (int col = 0; col < cols; col++) {
-			newMatrix.data[col][row] = this->data[row][col];
+			newMatrix.data[col][row] = matrix.data[row][col];
 		}
 	}
 	return newMatrix;
