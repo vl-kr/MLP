@@ -6,7 +6,9 @@ cmake_minimum_required (VERSION 3.8)
 project ("main")
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fopenmp -D_GLIBCXX_PARALLEL -Ofast -std=c++17 -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -D_GLIBCXX_PARALLEL -Ofast -std=c++17 -march=native")
+
+find_package(OpenMP)
 
 # Add source to this project's executable.
 add_executable (main 
@@ -25,4 +27,6 @@ add_executable (main
  "libs/util/util.cpp" 
  "libs/util/util.h")
 
-# TODO: Add tests and install targets if needed.
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX)
+endif()
