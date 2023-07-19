@@ -1,10 +1,13 @@
 #include "io.h"
-#include <iterator>
 
 using namespace std;
 
 
-Matrix loadFromCSV(string inFilePath) { // loads data form a .csv file into a Matrix
+Matrix loadFromCSV(string inFilePath, int normalizationDivisor) {
+	/*
+	loads data form a .csv file into a Matrix, with optional normalization
+	*/
+
 	ifstream inFile(inFilePath);
 	cout << "Attempting to open file: " << inFilePath << endl;
 	if (!inFile.is_open()) {
@@ -41,7 +44,7 @@ Matrix loadFromCSV(string inFilePath) { // loads data form a .csv file into a Ma
 				tmpStr = line.substr(pos);
 				pos = line.length();
 			}
-			data[row][col] = stod(tmpStr);
+			data[row][col] = stod(tmpStr) / normalizationDivisor; 
 			col++;
 		}
 		row++;
@@ -49,10 +52,13 @@ Matrix loadFromCSV(string inFilePath) { // loads data form a .csv file into a Ma
 	return Matrix(data);
 }
 
-void writeToFile(string outFilePath, vector<double> outVect) { // used to create actualPredictions file
+void writeToFile(string outFilePath, vector<double> outVect) { 
+	/*
+	used to create actualPredictions file
+	*/
+
 	ofstream inFile(outFilePath);
 	assert(inFile.is_open());
-	string line;
 	for(double num : outVect){
 		inFile << num << endl;
 	}
