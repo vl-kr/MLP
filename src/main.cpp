@@ -1,8 +1,4 @@
-﻿// main.cpp : Defines the entry point for the application.
-//
-
-
-#include "main.h"
+﻿#include "main.h"
 
 #include <chrono>
 using std::chrono::high_resolution_clock;
@@ -42,7 +38,7 @@ int main(int argc, char** argv)
 
 	size_t threads = 16;
 
-	if (argc > 2){
+	if (argc > 2) {
 		epochs = stoi(argv[1]);
 		threads = stoi(argv[2]);
 	}
@@ -59,9 +55,9 @@ int main(int argc, char** argv)
 	cout << "] ";
 	cout << " Learning rate: " << learningRate << " Batch size: " << batchSize << " decay: " << weightDecay << endl;
 
-	Matrix trainDataVectors = loadFromCSV("data/fashion_mnist_train_vectors.csv");
+	Matrix trainDataVectors = loadFromCSV("data/fashion_mnist_train_vectors.csv", 255); // dividing by 255 is done to normalize the data
 	Matrix trainDataLabels = loadFromCSV("data/fashion_mnist_train_labels.csv");
-	Matrix testDataVectors = loadFromCSV("data/fashion_mnist_test_vectors.csv");
+	Matrix testDataVectors = loadFromCSV("data/fashion_mnist_test_vectors.csv", 255); // dividing by 255 is done to normalize the data
 	Matrix testDataLabels = loadFromCSV("data/fashion_mnist_test_labels.csv");
 
 	size_t trainDataRows = trainDataVectors.data.size();
@@ -85,7 +81,7 @@ int main(int argc, char** argv)
 
 	vector<vector<double>> biases(layersNeuronCount.size() - 1, vector<double>()); //initialize biases
 	for (size_t i = 1; i < layersNeuronCount.size(); i++)
-		biases[i-1].resize(layersNeuronCount[i], biasInitVal);
+		biases[i - 1].resize(layersNeuronCount[i], biasInitVal);
 
 	vector<Matrix> weightChangeSum(weights); // accumulates over 1 batch
 	vector<vector<double>> biasChangeSum(biases); // accumulates over 1 batch 
@@ -105,7 +101,7 @@ int main(int argc, char** argv)
 
 	size_t epochCounter = 0;
 
-	while(runTimeD < 28 && (runTimeD < 23 || epochCounter < epochs || accuracy < 0.883)) {
+	while (runTimeD < 28 && (runTimeD < 23 || epochCounter < epochs || accuracy < 0.883)) {
 
 		cout << "Epoch: " << epochCounter << endl;
 
@@ -139,7 +135,7 @@ int main(int argc, char** argv)
 				vector<double>& trainingExample = trainDataVectors.data[shuffleMap[trainingExampleOffset + batchNum]];
 				int label = trainDataLabels.data[shuffleMap[trainingExampleOffset + batchNum]][0];
 
-				forwardPass(trainingExample, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, label);
+				forwardPass(trainingExample, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU);
 				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, label);
 				computeWeightChange(weightChangeSum, biasChangeSum, trainingExample, nonStaticNeuronLayersOutputs, weights, biases, deltas);
 			}
@@ -160,7 +156,7 @@ int main(int argc, char** argv)
 	vector<double> outLabels;
 
 	for (auto& inputVector : testDataVectors.data) {
-		forwardPass(inputVector, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, 0);
+		forwardPass(inputVector, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU);
 		outLabels.push_back(vecToScalar(nonStaticNeuronLayersOutputs.back()));
 	}
 

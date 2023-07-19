@@ -1,7 +1,4 @@
-﻿// main.h : Include file for standard system include files,
-// or project specific include files.
-
-#pragma once
+﻿#pragma once
 
 #include "libs/matrix/matrix.h"
 #include "libs/io/io.h"
@@ -18,6 +15,4 @@
 #include <cmath>
 #include <random>
 #include <algorithm>
-
-
-// TODO: Reference additional headers your program requires here.
+#include <numeric>
