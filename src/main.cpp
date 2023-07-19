@@ -139,7 +139,7 @@ int main(int argc, char** argv)
 				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, label);
 				computeWeightChange(weightChangeSum, trainingExample, nonStaticNeuronLayersOutputs, deltas);
 			}
-			updateWeights(weightChangeSum, biasChangeSum, weights, biases, batchSize, learningRate, params, optimizer);
+			updateWeights(weightChangeSum, weights, batchSize, learningRate, params);
 		}
 		shuffle(shuffleMap.begin(), shuffleMap.end(), random_device());
 		epoch2 = high_resolution_clock::now();
