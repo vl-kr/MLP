@@ -24,7 +24,7 @@ void activationFunc(vector<double>& inVect, vector<double>& outVec, int activati
 	applies an activation function to values from inVect, and writes them into outVec
 	*/
 	if (activationFuncType == ACT_ReLU) {
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (size_t i = 0; i < size(inVect); i++) {
 			outVec[i] = max(0.0, inVect[i]);
 		}
@@ -57,7 +57,7 @@ vector<vector<double>> computeDeltas(vector<vector<double>>& nonStaticNeuronPote
 	deltas.insert(deltas.begin(), outLayerDeltas);
 	for (int layerIndex = nonStaticNeuronOutputs.size() - 2; layerIndex >= 0; layerIndex--) {
 		vector<double> layerDeltas(nonStaticNeuronOutputs[layerIndex].size());
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (size_t neuronIndex = 0; neuronIndex < nonStaticNeuronOutputs[layerIndex].size(); neuronIndex++) {
 			double sum = 0;
 			if (nonStaticNeuronPotentials[layerIndex][neuronIndex] > 0) { // ReLU derivation (1 for x > 0; 0 otherwise), saves time (I think)
@@ -82,13 +82,13 @@ void computeWeightChange(vector<Matrix>& weightChangeSum, vector<vector<double>>
 	inputVector				:		neuron outputs of the input layer
 	nonStaticNeuronOutputs	:		neuron outputs of the hidden + output layers
 	*/
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (size_t inputNeuronIndexI = 0; inputNeuronIndexI < inputVector.size(); inputNeuronIndexI++) {
 		for (size_t outputNeuronIndexJ = 0; outputNeuronIndexJ < weights[0].rows; outputNeuronIndexJ++) {
 			weightChangeSum[0].data[outputNeuronIndexJ][inputNeuronIndexI] += deltas[0][outputNeuronIndexJ] * inputVector[inputNeuronIndexI];
 		}
 	}
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (size_t layerIndex = 1; layerIndex < weights.size(); layerIndex++) {
 		for (size_t inputNeuronIndex = 0; inputNeuronIndex < weights[layerIndex].cols; inputNeuronIndex++) {
 			for (size_t outputNeuronIndex = 0; outputNeuronIndex < weights[layerIndex].rows; outputNeuronIndex++) {
@@ -96,7 +96,7 @@ void computeWeightChange(vector<Matrix>& weightChangeSum, vector<vector<double>>
 			}
 		}
 	}
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (size_t biasLayer = 0; biasLayer < biasChangeSum.size(); biasLayer++) {
 		for (size_t biasIndex = 0; biasIndex < biasChangeSum[biasLayer].size(); biasIndex++) {
 			biasChangeSum[biasLayer][biasIndex] += deltas[biasLayer][biasIndex];
@@ -218,12 +218,24 @@ void forwardPass(vector<double>& inputNeurons, vector<vector<double>>& nonStatic
 	return;
 }
 
-vector<Matrix> initWeights(vector<size_t> architecture, int weightInitMethod) { //each number in architecture = number of neurons in an individual layer
+vector<Matrix> initWeights(vector<size_t> architecture, int weightInitMethod, int initialBias) {
+	/*
+	initializes biases and weights between all neurons in adjacent layers using the chosen method
+
+	architecture							:		each number in architecture defines number of neurons in an individual layer
+	weightInitMethod						:		allows to choose between different weight initialization methods
+	initialBias								:		initial bias value for all neurons, default is 0
+	*/
 	assert(architecture.size() >= 3);
 	vector<Matrix> weights;
 	for (size_t i = 1; i < architecture.size(); i++) {
 		double variance = getVariance(architecture[i - 1], architecture[i], weightInitMethod);
-		weights.push_back(Matrix::RandomMatrixSetSize(architecture[i], architecture[i - 1], variance));
+		weights.push_back(Matrix::RandomMatrixSetSize(architecture[i], architecture[i - 1] + 1, variance)); // +1 cols for bias
+	}
+	for (size_t layerIndex = 0; layerIndex < weights.size(); layerIndex++) {
+		for (size_t neuronIndex = 0; neuronIndex < weights[layerIndex].rows; neuronIndex++) {
+			weights[layerIndex].data[neuronIndex][weights[layerIndex].cols - 1] = initialBias; //set bias
+		}
 	}
 	return weights;
 }
