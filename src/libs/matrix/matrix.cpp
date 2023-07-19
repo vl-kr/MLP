@@ -49,24 +49,28 @@ void Matrix::PrintMatrix() {
 	cout << endl;
 }
 
-Matrix Matrix::Transpose() {
-	Matrix newMatrix = Matrix();
-	for (size_t col = 0; col < this->cols; col++) {
-		vector<double> tempVCT;
-		for (size_t row = 0; row < this->rows; row++) {
-			tempVCT.push_back(this->data[row][col]);
+Matrix Matrix::Transpose(bool dropBiases) {
+	/*
+	return new transposed matrix
+	dropBiases 	:	if true, the last column of the original Matrix is ignored
+	*/
+	size_t cols = this->cols - (int)dropBiases;
+	Matrix newMatrix(vector<vector<double>>(cols, vector<double>(this->rows)));
+	int row;
+#pragma omp parallel for
+for (row = 0; row < this->rows; row++) {
+		for (int col = 0; col < cols; col++) {
+			newMatrix.data[col][row] = this->data[row][col];
 		}
-		newMatrix.data.push_back(tempVCT);
 	}
-	newMatrix.cols = this->rows;
-	newMatrix.rows = this->cols;
 	return newMatrix;
 }
 
 void Matrix::AddMatrix(const Matrix& MatrixB) {
 	assert(this->cols == MatrixB.cols && this->rows == MatrixB.rows);
-//#pragma omp parallel for
-	for (size_t row = 0; row < this->rows; row++) {
+	int row;
+#pragma omp parallel for
+	for (row = 0; row < this->rows; row++) {
 		for (size_t col = 0; col < this->cols; col++) {
 			this->data[row][col] += MatrixB.data[row][col];
 		}
@@ -192,6 +196,29 @@ vector<double> Matrix::MultiplyMatrixByVector(const Matrix& MatrixA, const vecto
 		}
 	}
 	return data;
+}
+
+Matrix Matrix::MultiplyVectors(const vector<double>& VectorA, const vector<double>& VectorB, bool addBias) {
+	/*
+	multiplies 2 vectors and returns the result as a matrix
+
+	VectorA							:	vector to be multiplied
+	VectorB							:	vector multiplying
+	addBias							:	whether to extend VectorB by 1 (due to bias), default is false
+	*/
+	int cols = VectorB.size() + (int)addBias;
+	Matrix newMatrix = Matrix(vector<vector<double>>(VectorA.size(), vector<double>(cols)));
+	int row;
+#pragma omp parallel for
+	for (row = 0; row < VectorA.size(); row++) {
+		for (size_t col = 0; col < VectorB.size(); col++) {
+			newMatrix.data[row][col] = VectorA[row] * VectorB[col];
+		}
+		if (addBias) {
+			newMatrix.data[row][VectorB.size()] = VectorA[row];
+		}
+	}
+	return newMatrix;
 }
 
 Matrix Matrix::RandomMatrix(size_t maxRows, size_t maxCols, int maxVal) {

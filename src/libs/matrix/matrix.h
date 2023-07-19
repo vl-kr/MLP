@@ -21,7 +21,7 @@ public:
 
 	void PrintMatrix();
 
-	Matrix Transpose();
+	Matrix Transpose(bool dropBiases = false);
 
 	static Matrix VectorToMatrix(const std::vector<double>& vector, bool transposeVector);
 
@@ -38,6 +38,8 @@ public:
 	static Matrix MultiplyMatricesParallel(const Matrix& MatrixA, const Matrix& MatrixB);
 
 	static std::vector<double> MultiplyMatrixByVector(const Matrix& MatrixA, const std::vector<double>& VectorB, bool addBias = false);
+
+	static Matrix Matrix::MultiplyVectors(const std::vector<double>& VectorA, const std::vector<double>& VectorB, bool addBias = false);
 
 	static Matrix RandomMatrix(size_t maxRows, size_t maxCols, int maxVal);
 
