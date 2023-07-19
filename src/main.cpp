@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 	cout << "Architecture: [";
 	for (auto val : hiddenLayersNeuronCount)
 		cout << val << ',';
-	cout << "] ";
+	cout << OUTPUT_LAYER_SIZE << "] ";
 	cout << " Learning rate: " << learningRate << " Batch size: " << batchSize << " decay: " << weightDecay << endl;
 
 	Matrix trainDataVectors = loadFromCSV("data/fashion_mnist_train_vectors.csv", 255); // dividing by 255 is done to normalize the data
@@ -73,24 +73,17 @@ int main(int argc, char** argv)
 	for (size_t i = 1; i < layersNeuronCount.size(); i++)
 		nonStaticNeuronLayersPotentials[i - 1].resize(layersNeuronCount[i]);
 
-	vector<vector<double>> nonStaticNeuronLayersOutputs(layersNeuronCount.size() - 1, vector<double>()); // potentials after applying activation function
-	for (size_t i = 1; i < layersNeuronCount.size(); i++)
-		nonStaticNeuronLayersOutputs[i - 1].resize(layersNeuronCount[i]);
+	vector<vector<double>> nonStaticNeuronLayersOutputs(nonStaticNeuronLayersPotentials); // potentials after applying activation function
 
 	vector<Matrix> weights = initWeights(layersNeuronCount, INIT_HE); // initialize weights
 
-	vector<vector<double>> biases(layersNeuronCount.size() - 1, vector<double>()); //initialize biases
-	for (size_t i = 1; i < layersNeuronCount.size(); i++)
-		biases[i - 1].resize(layersNeuronCount[i], biasInitVal);
-
-	vector<Matrix> weightChangeSum(weights); // accumulates over 1 batch
-	vector<vector<double>> biasChangeSum(biases); // accumulates over 1 batch 
+	vector<Matrix> weightChangeSum(weights); // will accumulate over each batch
 
 	vector<int> shuffleMap(evaluationOffset); //used to shuffle the training data, maps only to training examples before evaluationOffset
 	iota(shuffleMap.begin(), shuffleMap.end(), 0);
 	shuffle(shuffleMap.begin(), shuffleMap.end(), random_device());
 
-	//double error = 0;
+	double error = 0;
 	double accuracy = 0;
 
 	double runTimeD = 0;
@@ -105,7 +98,7 @@ int main(int argc, char** argv)
 
 		cout << "Epoch: " << epochCounter << endl;
 
-		//error = evaluateNetworkError(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
+		error = evaluateNetworkError(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
 		accuracy = evaluateNetworkAccuracy(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
 
 		if (accuracy > 0.86) { // adaptive learning rate
@@ -115,21 +108,18 @@ int main(int argc, char** argv)
 			learningRate = 0.0005;
 		}
 
-		auto epoch_int = duration_cast<milliseconds>(epoch2 - epoch1); // getting number of milliseconds
+		auto epoch_int = duration_cast<milliseconds>(epoch2 - epoch1); // measuring time spent on epoch
 		auto runTime = duration_cast<milliseconds>(epoch2 - runStart);
 		epoch1 = high_resolution_clock::now();
 		runTimeD = ((double)runTime.count()) / 60000;
 
-		cout << "Accuracy: " << accuracy << ", Error: " << "not calculated" << ", Runtime: " << runTimeD << " min., ms since last epoch: " << epoch_int.count() << endl;
+		cout << "Accuracy: " << accuracy << ", Error: " << error << ", Runtime: " << runTimeD << " min., ms since last epoch: " << epoch_int.count() << endl;
 
 		for (size_t trainingExampleOffset = 0; trainingExampleOffset + batchSize <= evaluationOffset; trainingExampleOffset += batchSize) {
 
 			for (Matrix& layer : weightChangeSum) // reset before each batch
 				for (vector<double>& v1 : layer.data)
 					fill(v1.begin(), v1.end(), 0);
-
-			for (vector<double>& v1 : biasChangeSum) // reset before each batch
-				fill(v1.begin(), v1.end(), 0);
 
 			for (size_t batchNum = 0; batchNum < batchSize; batchNum++) {
 				vector<double>& trainingExample = trainDataVectors.data[shuffleMap[trainingExampleOffset + batchNum]];
@@ -149,9 +139,6 @@ int main(int argc, char** argv)
 	for (Matrix& layer : weightChangeSum) // reset before test evaluation
 		for (vector<double>& v1 : layer.data)
 			fill(v1.begin(), v1.end(), 0);
-
-	for (vector<double>& v1 : biasChangeSum)
-		fill(v1.begin(), v1.end(), 0);
 
 	vector<double> outLabels;
 
