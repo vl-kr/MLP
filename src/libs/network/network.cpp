@@ -87,48 +87,30 @@ void computeWeightChange(vector<Matrix>& weightChangeSum, vector<double>& inputV
 	}
 }
 
-void updateWeights(vector<Matrix>& weightChangeSum, vector<vector<double>>& biasChangeSum, vector<Matrix>& weights, vector<vector<double>>& biases, size_t batchSize, double learningRate, vector<vector<double>>& params, string method) {
+void updateWeights(vector<Matrix>& weightChangeSum, vector<Matrix>& weights, size_t batchSize, double learningRate, vector<vector<double>>& params) {
 	/*
 	updates weights and applies some optimizations (most of them are commented out to save time)
 
 	weightChangeSum			:		the sum of dE/dw for each training example in a batch
-	biasChangeSum			:		weightChangeSum for biases
 	weights					:		weights
-	biases					:		biases
 	batchSize				:		number of training examples in a batch
 	learningRate			: 		learning rate
 	params					:		serves as a memory for different optimization algorithms
-	method					:		decides which optimization method to use
 	*/
 	for (size_t layerIndex = 0; layerIndex < weights.size(); layerIndex++) {
-		for (size_t inputNeuronIndex = 0; inputNeuronIndex < weights[layerIndex].cols; inputNeuronIndex++) {
-			for (size_t outputNeuronIndex = 0; outputNeuronIndex < weights[layerIndex].rows; outputNeuronIndex++) {
+		for (size_t outputNeuronIndex = 0; outputNeuronIndex < weights[layerIndex].rows; outputNeuronIndex++) {
+			for (size_t inputNeuronIndex = 0; inputNeuronIndex < weights[layerIndex].cols - 1; inputNeuronIndex++) {
 				double dw = weightChangeSum[layerIndex].data[outputNeuronIndex][inputNeuronIndex] / batchSize;
 				params[0][0] = (0.9 * params[0][0]) + ((0.1) * dw * dw); // RMSProp parameter
-
-				double weightDelta;
-
-				weightDelta = -((learningRate / sqrt(params[0][0] + 0.00000001)) * dw); //only RMSProp
-
+				double weightDelta = -((learningRate / sqrt(params[0][0] + 0.00000001)) * dw); //only RMSProp
 				weights[layerIndex].data[outputNeuronIndex][inputNeuronIndex] += weightDelta;
-
 			}
+			double dwBias = weightChangeSum[layerIndex].data[outputNeuronIndex][weights[layerIndex].cols - 1] / batchSize;
+			params[1][0] = (0.9 * params[1][0]) + ((0.1) * dwBias * dwBias);
+			double weightDeltaBias = -((learningRate / sqrt(params[1][0])) * dwBias);
+			weights[layerIndex].data[outputNeuronIndex][weights[layerIndex].cols - 1] += weightDeltaBias;
 		}
 	}
-
-	for (size_t layerIndex = 0; layerIndex < biasChangeSum.size(); layerIndex++) {
-		for (size_t biasIndex = 0; biasIndex < biasChangeSum[layerIndex].size(); biasIndex++) {
-			double dw = biasChangeSum[layerIndex][biasIndex] / batchSize;
-			params[1][0] = (0.9 * params[1][0]) + ((0.1) * dw * dw); // RMSProp parameter
-
-			double weightDelta;
-
-			weightDelta = -((learningRate / sqrt(params[1][0])) * dw); //only RMSProp #2
-
-			biases[layerIndex][biasIndex] += weightDelta;
-		}
-	}
-
 }
 
 double evaluateNetworkError(Matrix& testDataVectors, Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, int activationFuncType) {
