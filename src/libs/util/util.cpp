@@ -1,6 +1,3 @@
-// matrix.cpp : Defines the entry point for the application.
-//
-
 #include "util.h"
 
 using namespace std;
