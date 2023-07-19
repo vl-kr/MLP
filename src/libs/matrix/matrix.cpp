@@ -1,6 +1,4 @@
-﻿// Most of the Matrix operation functions are not actually used anywhere
-
-#include "matrix.h"
+﻿#include "matrix.h"
 
 using namespace std;
 
@@ -25,11 +23,6 @@ double normalRandom() {
 	return cos(2 * pi * rand1) * sqrt(-2.0 * log(rand2)); // Box–Muller transform
 }
 
-Matrix::Matrix() {
-	cols = 0;
-	rows = 0;
-}
-
 Matrix::Matrix(vector<vector<double>> data) {
 	assert(data.size() > 0);
 	this->data = move(data);
@@ -52,6 +45,7 @@ void Matrix::PrintMatrix() {
 Matrix Matrix::Transpose(bool dropBiases) {
 	/*
 	return new transposed matrix
+
 	dropBiases 	:	if true, the last column of the original Matrix is ignored
 	*/
 	size_t cols = this->cols - (int)dropBiases;
@@ -67,7 +61,13 @@ for (row = 0; row < this->rows; row++) {
 }
 
 void Matrix::AddMatrix(const Matrix& MatrixB) {
-	assert(this->cols == MatrixB.cols && this->rows == MatrixB.rows);
+	/*
+	adds MatrixB to this matrix, modifies this matrix,
+	MatrixB must have the same dimensions as this matrix
+	*/
+	if (this->cols != MatrixB.cols || this->rows != MatrixB.rows) {
+		throw invalid_argument("Matrix dimensions must match");
+	}
 	int row;
 #pragma omp parallel for
 	for (row = 0; row < this->rows; row++) {
@@ -77,65 +77,6 @@ void Matrix::AddMatrix(const Matrix& MatrixB) {
 	}
 }
 
-Matrix Matrix::_AddMatrices(const Matrix& MatrixA, const Matrix& MatrixB) {
-	Matrix newMatrix = Matrix();
-	assert(MatrixA.cols == MatrixB.cols && MatrixA.rows == MatrixB.rows);
-	for (size_t row = 0; row < MatrixA.rows; row++) {
-		vector<double> tempVCT;
-		for (size_t col = 0; col < MatrixA.cols; col++) {
-			tempVCT.push_back(MatrixA.data[row][col] + MatrixB.data[row][col]);
-		}
-		newMatrix.data.push_back(tempVCT);
-	}
-	newMatrix.rows = MatrixA.rows;
-	newMatrix.cols = MatrixA.cols;
-	return newMatrix;
-}
-
-void Matrix::MultiplyByScalar(int scalar) {
-//#pragma omp parallel for
-	for (size_t row = 0; row < this->rows; row++) {
-		for (size_t col = 0; col < this->cols; col++) {
-			this->data[row][col] *= scalar;
-		}
-	}
-}
-
-Matrix Matrix::_MultiplyMatrixByScalar(const Matrix& MatrixA, int scalar) {
-	vector<vector<double>> data(MatrixA.rows, vector<double>(MatrixA.cols));
-	Matrix newMatrix = Matrix();
-	for (size_t row = 0; row < MatrixA.rows; row++) {
-		vector<double> tempVCT;
-		for (size_t col = 0; col < MatrixA.cols; col++) {
-			tempVCT.push_back(MatrixA.data[row][col] * scalar);
-		}
-		newMatrix.data.push_back(tempVCT);
-	}
-	newMatrix.rows = MatrixA.rows;
-	newMatrix.cols = MatrixA.cols;
-	return newMatrix;
-}
-
-Matrix Matrix::_MultiplyMatrices(const Matrix& MatrixA, const Matrix& MatrixB) {
-	Matrix newMatrix = Matrix();
-	assert(MatrixA.cols == MatrixB.rows);
-	for (vector<double> rowA : MatrixA.data) {
-		vector<double> tempVCT;
-		for (size_t i = 0; i < MatrixB.cols; i++) {
-			int sum = 0;
-			for (size_t j = 0; j < MatrixA.cols; j++) {
-				sum += rowA[j] * MatrixB.data[j][i];
-			}
-			tempVCT.push_back(sum);
-		}
-		newMatrix.data.push_back(tempVCT);
-	}
-	newMatrix.rows = MatrixA.rows;
-	newMatrix.cols = MatrixB.cols;
-	return newMatrix;
-}
-
-
 Matrix Matrix::MultiplyMatricesParallel(const Matrix& MatrixA, const Matrix& MatrixB) {
 	/*
 	multiplies MatrixA by MatrixB, returns new matrix
@@ -144,7 +85,9 @@ Matrix Matrix::MultiplyMatricesParallel(const Matrix& MatrixA, const Matrix& Mat
 	MatrixA							:	matrix to be multiplied by MatrixB
 	MatrixB							:	matrix multiplying MatrixA
 	*/
-	assert(MatrixA.cols == MatrixB.rows);
+	if (MatrixA.cols != MatrixB.rows) {
+		throw invalid_argument("The matrix dimensions are not compatible for multiplication");
+	}
 	vector<vector<double>> data(MatrixA.rows, vector<double>(MatrixB.cols));
 	int rowA;
 #pragma omp parallel for
@@ -184,6 +127,12 @@ vector<double> Matrix::MultiplyMatrixByVector(const Matrix& MatrixA, const vecto
 	VectorB							:	vector multiplying matrix
 	addBias							:	whether to add bias to the result, default is false		!!!IMPORTANT!!! if true, VectorB.size() must be equal to MatrixA.cols + 1
 	*/
+	if (!addBias && MatrixA.cols != VectorB.size()) {
+		throw invalid_argument("The matrix cannot be multiplied by vector of this size");
+	}
+	else if (addBias && MatrixA.cols != VectorB.size() - 1) {
+		throw invalid_argument("The matrix with bias cannot be multiplied by vector of this size");
+	}
 	vector<double> data(MatrixA.rows);
 	int rowA;
 #pragma omp parallel for
@@ -221,21 +170,11 @@ Matrix Matrix::MultiplyVectors(const vector<double>& VectorA, const vector<doubl
 	return newMatrix;
 }
 
-Matrix Matrix::RandomMatrix(size_t maxRows, size_t maxCols, int maxVal) {
-	size_t rows = rand() % maxRows + 1;
-	size_t cols = rand() % maxCols + 1;
-	vector<vector<double>> d;
-	for (size_t i = 0; i < rows; i++) {
-		vector<double> tmp;
-		for (size_t j = 0; j < cols; j++) {
-			tmp.push_back(rand() % maxVal);
-		}
-		d.push_back(tmp);
-	}
-	return Matrix(d);
-}
-
-Matrix Matrix::RandomMatrixSetSize(size_t rows, size_t cols, double variance) { // used for weight initialization
+Matrix Matrix::RandomMatrixSetSize(size_t rows, size_t cols, double variance) {
+	/*
+	creates a new matrix of given dimenstions and fills it with random numbers from normal distribution with given variance
+	used for weights initialization
+	*/
 	vector<vector<double>> data;
 	for (size_t i = 0; i < rows; i++) {
 		vector<double> tmp;
@@ -246,16 +185,4 @@ Matrix Matrix::RandomMatrixSetSize(size_t rows, size_t cols, double variance) { 
 		data.push_back(tmp);
 	}
 	return Matrix(data);
-}
-
-bool Matrix::MatricesEqual(const Matrix& MatrixA, const Matrix& MatrixB) { // just for testing
-	assert(MatrixA.cols == MatrixB.cols && MatrixA.rows == MatrixB.rows);
-	for (size_t row = 0; row < MatrixA.rows; row++) {
-		for (size_t col = 0; col < MatrixA.cols; col++) {
-			if (MatrixA.data[row][col] != MatrixB.data[row][col]) {
-				return false;
-			}
-		}
-	}
-	return true;
 }
