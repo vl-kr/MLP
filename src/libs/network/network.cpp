@@ -51,56 +51,39 @@ vector<vector<double>> computeDeltas(vector<vector<double>>& nonStaticNeuronPote
 	delta is a derivative of the error function w.r.t the inner potential (dE/dy * o'(inner_potential))
 	creates a 2D matrix of deltas; one value for each neuron
 	*/
-	vector<vector<double>> deltas;
-	vector<double> outLayerDeltas(nonStaticNeuronOutputs.back());
-	outLayerDeltas[label] -= 1; // delta for the output layer, works only for softmax with cross entropy
-	deltas.insert(deltas.begin(), outLayerDeltas);
+	vector<vector<double>> deltas(nonStaticNeuronOutputs);
+	deltas.back()[label] -= 1; // delta for the output layer, works only for softmax with cross entropy
+
 	for (int layerIndex = nonStaticNeuronOutputs.size() - 2; layerIndex >= 0; layerIndex--) {
 		vector<double> layerDeltas(nonStaticNeuronOutputs[layerIndex].size());
-//#pragma omp parallel for
-		for (size_t neuronIndex = 0; neuronIndex < nonStaticNeuronOutputs[layerIndex].size(); neuronIndex++) {
-			double sum = 0;
-			if (nonStaticNeuronPotentials[layerIndex][neuronIndex] > 0) { // ReLU derivation (1 for x > 0; 0 otherwise), saves time (I think)
-				for (size_t nextLayerNeuronIndex = 0; nextLayerNeuronIndex < nonStaticNeuronOutputs[layerIndex + 1].size(); nextLayerNeuronIndex++) {
-					sum += deltas[0][nextLayerNeuronIndex] * weights[layerIndex + 1].data[nextLayerNeuronIndex][neuronIndex];
-				}
-			}
-			layerDeltas[neuronIndex] = sum;
+		Matrix weightsTransposed = weights[layerIndex + 1].Transpose(true);
+		deltas[layerIndex] = Matrix::MultiplyMatrixByVector(weightsTransposed, deltas[layerIndex + 1]);
+		for (int neuronIndex = 0; neuronIndex < deltas[layerIndex].size(); neuronIndex++) {
+			deltas[layerIndex][neuronIndex] = nonStaticNeuronPotentials[layerIndex][neuronIndex] > 0 ? deltas[layerIndex][neuronIndex] : 0; // ReLU derivation (1 for x > 0; 0 otherwise)
 		}
-		deltas.insert(deltas.begin(), layerDeltas);
 	}
 	return deltas;
 }
 
-void computeWeightChange(vector<Matrix>& weightChangeSum, vector<vector<double>>& biasChangeSum, vector<double>& inputVector, vector<vector<double>>& nonStaticNeuronOutputs, vector<Matrix>& weights, vector<vector<double>>& biases, vector<vector<double>>& deltas) {
+void computeWeightChange(vector<Matrix>& weightChangeSum, vector<double>& inputVector, vector<vector<double>>& nonStaticNeuronOutputs, vector<vector<double>>& deltas) {
 	/*
 	multiplies deltas with neuron outputs to get dE/dw
 	resulting values accumulate over each batch
 
 	weightChangeSum			:		the sum of dE/dw for each training example in a batch
-	biasChangeSum			:		weightChangeSum for biases
 	inputVector				:		neuron outputs of the input layer
 	nonStaticNeuronOutputs	:		neuron outputs of the hidden + output layers
+	deltas					:		deltas from computeDeltas
 	*/
-//#pragma omp parallel for
-	for (size_t inputNeuronIndexI = 0; inputNeuronIndexI < inputVector.size(); inputNeuronIndexI++) {
-		for (size_t outputNeuronIndexJ = 0; outputNeuronIndexJ < weights[0].rows; outputNeuronIndexJ++) {
-			weightChangeSum[0].data[outputNeuronIndexJ][inputNeuronIndexI] += deltas[0][outputNeuronIndexJ] * inputVector[inputNeuronIndexI];
+	int layerIndex;
+#pragma omp parallel for
+	for (layerIndex = 0; layerIndex < weightChangeSum.size(); layerIndex++) {
+		vector<double>* neuronOutputs = &inputVector;
+		if (layerIndex > 0) {
+			neuronOutputs = &nonStaticNeuronOutputs[layerIndex - 1];
 		}
-	}
-//#pragma omp parallel for
-	for (size_t layerIndex = 1; layerIndex < weights.size(); layerIndex++) {
-		for (size_t inputNeuronIndex = 0; inputNeuronIndex < weights[layerIndex].cols; inputNeuronIndex++) {
-			for (size_t outputNeuronIndex = 0; outputNeuronIndex < weights[layerIndex].rows; outputNeuronIndex++) {
-				weightChangeSum[layerIndex].data[outputNeuronIndex][inputNeuronIndex] += deltas[layerIndex][outputNeuronIndex] * nonStaticNeuronOutputs[layerIndex - 1][inputNeuronIndex];
-			}
-		}
-	}
-//#pragma omp parallel for
-	for (size_t biasLayer = 0; biasLayer < biasChangeSum.size(); biasLayer++) {
-		for (size_t biasIndex = 0; biasIndex < biasChangeSum[biasLayer].size(); biasIndex++) {
-			biasChangeSum[biasLayer][biasIndex] += deltas[biasLayer][biasIndex];
-		}
+		Matrix tempMatrix = Matrix::MultiplyVectors(deltas[layerIndex], *neuronOutputs, true);
+		weightChangeSum[layerIndex].AddMatrix(tempMatrix);
 	}
 }
 

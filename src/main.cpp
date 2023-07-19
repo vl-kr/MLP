@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 
 				forwardPass(trainingExample, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU);
 				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, biases, ACT_ReLU, label);
-				computeWeightChange(weightChangeSum, biasChangeSum, trainingExample, nonStaticNeuronLayersOutputs, weights, biases, deltas);
+				computeWeightChange(weightChangeSum, trainingExample, nonStaticNeuronLayersOutputs, deltas);
 			}
 			updateWeights(weightChangeSum, biasChangeSum, weights, biases, batchSize, learningRate, params, optimizer);
 		}
