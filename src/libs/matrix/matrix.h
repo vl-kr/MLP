@@ -1,13 +1,9 @@
-﻿// matrix.h : Include file for standard system include files,
-// or project specific include files.
-
-#pragma once
+﻿#pragma once
 
 #include <iostream>
 #include <vector>
 #include <cassert>
 #include <omp.h>
-#include <cmath>
 
 
 class Matrix
@@ -40,9 +36,8 @@ public:
 	static Matrix _MultiplyMatrices(const Matrix& MatrixA, const Matrix& MatrixB); //use MultiplyMatricesParallel instead
 
 	static Matrix MultiplyMatricesParallel(const Matrix& MatrixA, const Matrix& MatrixB);
-	static Matrix MultiplyMatricesParallel(const Matrix& MatrixA, const std::vector<double>& vectorB, bool transposeVector=true);
 
-	static std::vector<double> MultiplyMatrixByVector(const Matrix& MatrixA, const std::vector<double>& VectorB);
+	static std::vector<double> MultiplyMatrixByVector(const Matrix& MatrixA, const std::vector<double>& VectorB, bool addBias = false);
 
 	static Matrix RandomMatrix(size_t maxRows, size_t maxCols, int maxVal);
 
@@ -50,5 +45,3 @@ public:
 
 	static bool MatricesEqual(const Matrix& MatrixA, const Matrix& MatrixB);
 };
-
-// TODO: Reference additional headers your program requires here.
