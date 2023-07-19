@@ -125,12 +125,12 @@ vector<double> Matrix::MultiplyMatrixByVector(const Matrix& MatrixA, const vecto
 
 	MatrixA							:	matrix to be multiplied by vector
 	VectorB							:	vector multiplying matrix
-	addBias							:	whether to add bias to the result, default is false		!!!IMPORTANT!!! if true, VectorB.size() must be equal to MatrixA.cols + 1
+	addBias							:	whether to add bias to the result, default is false		!!!IMPORTANT!!! if true, MatrixA.cols must be equal to VectorB.size() + 1
 	*/
 	if (!addBias && MatrixA.cols != VectorB.size()) {
 		throw invalid_argument("The matrix cannot be multiplied by vector of this size");
 	}
-	else if (addBias && MatrixA.cols != VectorB.size() - 1) {
+	else if (addBias && MatrixA.cols != VectorB.size() + 1) {
 		throw invalid_argument("The matrix with bias cannot be multiplied by vector of this size");
 	}
 	vector<double> data(MatrixA.rows);

@@ -173,7 +173,7 @@ void forwardPass(vector<double>& inputNeurons, vector<vector<double>>& nonStatic
 		if (layerIndex > 0) {
 			prevLayerOutputs = &nonStaticNeuronOutputs[layerIndex - 1];
 		}
-		nonStaticNeuronPotentials[layerIndex] = Matrix::MultiplyMatrixByVector(weights[layerIndex], *prevLayerOutputs);
+		nonStaticNeuronPotentials[layerIndex] = Matrix::MultiplyMatrixByVector(weights[layerIndex], *prevLayerOutputs, true);
 
 		if (layerIndex == nonStaticNeuronPotentials.size() - 1)
 			activationFunc(nonStaticNeuronPotentials[layerIndex], nonStaticNeuronOutputs[layerIndex], ACT_SOFTMAX); //softmax for output layer
