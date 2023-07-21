@@ -1,6 +1,5 @@
 ﻿#include "main.h"
 
-#include <chrono>
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
 using std::chrono::duration;
@@ -10,50 +9,42 @@ using namespace std;
 
 //-------------------HYPERPARAMETERS--------------------------
 
-#define OUTPUT_LAYER_SIZE 10
+const size_t OUTPUT_LAYER_SIZE = 10;
 
 //------------------------------------------------------------
 
-vector<size_t> hiddenLayersNeuronCount = { 256,256 };
-#define LEARNING_RATE 0.001
-#define BATCH_SIZE 200
+const vector<size_t> HIDDEN_LAYERS_NEURON_COUNT = { 128,128 };
+const size_t BATCH_SIZE = 200;
 
-#define EVALUATION_SET_SIZE_PERCENTAGE 10
-#define EPOCHS 70
-#define BIAS_INIT_VALUE 0
+const int EVALUATION_SET_SIZE_PERCENTAGE = 10;
+const double BIAS_INIT_VALUE = 0;
+const double WEIGHT_DECAY = 0.01;
+const string OPTIMIZER = "RMS"; // TODO: use enums instead of strings
+
+double learningRate = 0.001;
+size_t epochs = 70;
+size_t threads = 8;
 
 //------------------------------------------------------------
 
 int main(int argc, char** argv)
 {
 	srand(time(NULL));
+	omp_set_num_threads(threads);
 
-	double learningRate = LEARNING_RATE;
-	size_t batchSize = BATCH_SIZE;
-	size_t evalSetSizePercent = EVALUATION_SET_SIZE_PERCENTAGE;
-	size_t epochs = EPOCHS;
-	double biasInitVal = BIAS_INIT_VALUE;
-	double weightDecay = 0.01;
-	string optimizer = "RMS";
-
-	size_t threads = 16;
-
-	if (argc > 2) {
+	if (argc > 2) { // default values are used if no arguments are passed
 		epochs = stoi(argv[1]);
 		threads = stoi(argv[2]);
 	}
 
-	omp_set_num_threads(threads);
-
 	cout << "Epochs: " << epochs << endl;
 
-	vector<vector<double>> params(2, vector<double>(5, 0)); // used as a memory for different optimizers
-
 	cout << "Architecture: [";
-	for (auto val : hiddenLayersNeuronCount)
+	for (auto val : HIDDEN_LAYERS_NEURON_COUNT) {
 		cout << val << ',';
+	}
 	cout << OUTPUT_LAYER_SIZE << "] ";
-	cout << " Learning rate: " << learningRate << " Batch size: " << batchSize << " decay: " << weightDecay << endl;
+	cout << " Learning rate: " << learningRate << " Batch size: " << BATCH_SIZE << " decay: " << WEIGHT_DECAY << endl;
 
 	Matrix trainDataVectors = loadFromCSV("data/fashion_mnist_train_vectors.csv", 255); // dividing by 255 is done to normalize the data
 	Matrix trainDataLabels = loadFromCSV("data/fashion_mnist_train_labels.csv");
@@ -63,21 +54,25 @@ int main(int argc, char** argv)
 	size_t trainDataRows = trainDataVectors.data.size();
 	size_t trainDataCols = trainDataVectors.data[0].size();
 
-	static size_t evaluationOffset = trainDataRows - (trainDataRows * (((float)evalSetSizePercent) / 100)); //marks the index of the first training example used for network evaluation
+	// evaluationOffset marks the index of the first example excluded from training and used for network evaluation
+	static size_t evaluationOffset = trainDataRows - (trainDataRows * (((float)EVALUATION_SET_SIZE_PERCENTAGE) / 100)); 
 
-	vector<size_t> layersNeuronCount = hiddenLayersNeuronCount; // adding hidden layers
+	vector<size_t> layersNeuronCount = HIDDEN_LAYERS_NEURON_COUNT; // adding hidden layers
 	layersNeuronCount.insert(layersNeuronCount.begin(), trainDataCols); // adding input layer
 	layersNeuronCount.push_back(OUTPUT_LAYER_SIZE); // adding output layer
 
 	vector<vector<double>> nonStaticNeuronLayersPotentials(layersNeuronCount.size() - 1, vector<double>()); // all layers except the input layer
-	for (size_t i = 1; i < layersNeuronCount.size(); i++)
+	for (size_t i = 1; i < layersNeuronCount.size(); i++) {
 		nonStaticNeuronLayersPotentials[i - 1].resize(layersNeuronCount[i]);
+	}
 
 	vector<vector<double>> nonStaticNeuronLayersOutputs(nonStaticNeuronLayersPotentials); // potentials after applying activation function
 
 	vector<Matrix> weights = initWeights(layersNeuronCount, INIT_HE); // initialize weights
 
 	vector<Matrix> weightChangeSum(weights); // will accumulate over each batch
+
+	vector<vector<double>> params(2, vector<double>(5, 0)); // used as a memory for different optimizers
 
 	vector<int> shuffleMap(evaluationOffset); //used to shuffle the training data, maps only to training examples before evaluationOffset
 	iota(shuffleMap.begin(), shuffleMap.end(), 0);
@@ -86,15 +81,13 @@ int main(int argc, char** argv)
 	double error = 0;
 	double accuracy = 0;
 
-	double runTimeD = 0;
-
 	auto runStart = high_resolution_clock::now();
-	auto epoch1 = high_resolution_clock::now();
-	auto epoch2 = high_resolution_clock::now();
+	auto epochTimerStart = high_resolution_clock::now();
+	auto epochTimerEnd = high_resolution_clock::now();
 
 	size_t epochCounter = 0;
 
-	while (runTimeD < 28 && (runTimeD < 23 || epochCounter < epochs || accuracy < 0.883)) {
+	while (accuracy < 0.89) {
 
 		cout << "Epoch: " << epochCounter << endl;
 
@@ -108,20 +101,21 @@ int main(int argc, char** argv)
 			learningRate = 0.0005;
 		}
 
-		auto epoch_int = duration_cast<milliseconds>(epoch2 - epoch1); // measuring time spent on epoch
-		auto runTime = duration_cast<milliseconds>(epoch2 - runStart);
-		epoch1 = high_resolution_clock::now();
-		runTimeD = ((double)runTime.count()) / 60000;
+		auto epochLength = duration_cast<milliseconds>(epochTimerEnd - epochTimerStart); // measuring time spent on epoch
+		auto runTimeMs = duration_cast<milliseconds>(epochTimerEnd - runStart); // measuring total time spent on training
+		double runTimeMins = ((double)runTimeMs.count()) / 60000; // converting to minutes
+		epochTimerStart = high_resolution_clock::now();
 
-		cout << "Accuracy: " << accuracy << ", Error: " << error << ", Runtime: " << runTimeD << " min., ms since last epoch: " << epoch_int.count() << endl;
+		cout << "Accuracy: " << accuracy << ", Error: " << error << ", Runtime: " << runTimeMins << " min., ms since last epoch: " << epochLength.count() << endl;
 
-		for (size_t trainingExampleOffset = 0; trainingExampleOffset + batchSize <= evaluationOffset; trainingExampleOffset += batchSize) {
+		for (size_t trainingExampleOffset = 0; trainingExampleOffset + BATCH_SIZE <= evaluationOffset; trainingExampleOffset += BATCH_SIZE) {
 
-			for (Matrix& layer : weightChangeSum) // reset before each batch
-				for (vector<double>& v1 : layer.data)
+			for (Matrix& layer : weightChangeSum){ // reset before each batch
+				for (vector<double>& v1 : layer.data){
 					fill(v1.begin(), v1.end(), 0);
-
-			for (size_t batchNum = 0; batchNum < batchSize; batchNum++) {
+				}
+			}
+			for (size_t batchNum = 0; batchNum < BATCH_SIZE; batchNum++) {
 				vector<double>& trainingExample = trainDataVectors.data[shuffleMap[trainingExampleOffset + batchNum]];
 				int label = trainDataLabels.data[shuffleMap[trainingExampleOffset + batchNum]][0];
 
@@ -129,16 +123,12 @@ int main(int argc, char** argv)
 				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, label);
 				computeWeightChange(weightChangeSum, trainingExample, nonStaticNeuronLayersOutputs, deltas);
 			}
-			updateWeights(weightChangeSum, weights, batchSize, learningRate, params);
+			updateWeights(weightChangeSum, weights, BATCH_SIZE, learningRate, params);
 		}
 		shuffle(shuffleMap.begin(), shuffleMap.end(), random_device());
-		epoch2 = high_resolution_clock::now();
+		epochTimerEnd = high_resolution_clock::now();
 		epochCounter += 1;
 	}
-
-	for (Matrix& layer : weightChangeSum) // reset before test evaluation
-		for (vector<double>& v1 : layer.data)
-			fill(v1.begin(), v1.end(), 0);
 
 	vector<double> outLabels;
 

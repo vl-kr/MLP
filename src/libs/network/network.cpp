@@ -52,7 +52,7 @@ vector<vector<double>> computeDeltas(const vector<vector<double>>& nonStaticNeur
 	vector<vector<double>> deltas(nonStaticNeuronOutputs);
 	deltas.back()[label] -= 1; // delta for the output layer, works only for softmax with cross entropy
 
-	for (int layerIndex = nonStaticNeuronOutputs.size() - 2; layerIndex >= 0; layerIndex--) {
+	for (int layerIndex = nonStaticNeuronOutputs.size() - 2; layerIndex >= 0; layerIndex--) { // TODO: compare with the size of something else
 		Matrix weightsTransposed = Matrix::Transpose(weights[layerIndex + 1], true);
 		deltas[layerIndex] = Matrix::MultiplyMatrixByVector(weightsTransposed, deltas[layerIndex + 1]);
 		for (int neuronIndex = 0; neuronIndex < deltas[layerIndex].size(); neuronIndex++) {
