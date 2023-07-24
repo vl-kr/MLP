@@ -48,12 +48,12 @@ Matrix Matrix::Transpose(const Matrix& matrix, bool dropBiases) {
 
 	dropBiases 	:	if true, the last column of the original Matrix is ignored
 	*/
-	int cols = matrix.cols - (int)dropBiases;
+	size_t cols = matrix.cols - (int)dropBiases;
 	Matrix newMatrix(vector<vector<double>>(cols, vector<double>(matrix.rows)));
-	int row;
+	size_t row;
 #pragma omp parallel for
 for (row = 0; row < matrix.rows; row++) {
-		for (int col = 0; col < cols; col++) {
+		for (size_t col = 0; col < cols; col++) {
 			newMatrix.data[col][row] = matrix.data[row][col];
 		}
 	}
@@ -68,10 +68,10 @@ void Matrix::AddMatrix(const Matrix& MatrixB) {
 	if (this->cols != MatrixB.cols || this->rows != MatrixB.rows) {
 		throw invalid_argument("Matrix dimensions must match");
 	}
-	int row;
+	size_t row;
 #pragma omp parallel for
 	for (row = 0; row < this->rows; row++) {
-		for (int col = 0; col < this->cols; col++) {
+		for (size_t col = 0; col < this->cols; col++) {
 			this->data[row][col] += MatrixB.data[row][col];
 		}
 	}
@@ -89,11 +89,11 @@ Matrix Matrix::MultiplyMatricesParallel(const Matrix& MatrixA, const Matrix& Mat
 		throw invalid_argument("The matrix dimensions are not compatible for multiplication");
 	}
 	vector<vector<double>> data(MatrixA.rows, vector<double>(MatrixB.cols));
-	int rowA;
+	size_t rowA;
 #pragma omp parallel for
 	for (rowA = 0; rowA < MatrixA.rows; rowA++) {
-		for (int colA_rowB = 0; colA_rowB < MatrixA.cols; colA_rowB++) {
-			for (int colB = 0; colB < MatrixB.cols; colB++) {
+		for (size_t colA_rowB = 0; colA_rowB < MatrixA.cols; colA_rowB++) {
+			for (size_t colB = 0; colB < MatrixB.cols; colB++) {
 				data[rowA][colB] += MatrixA.data[rowA][colA_rowB] * MatrixB.data[colA_rowB][colB];
 			}
 		}
@@ -113,7 +113,7 @@ Matrix Matrix::VectorToMatrix(const vector<double>& vect, bool transposeVector) 
 		return Matrix(vector<vector<double>>(1, vect));
 	}
 	vector<vector<double>> data(vect.size(), vector<double>(1));
-	for (int i = 0; i < vect.size(); i++) {
+	for (size_t i = 0; i < vect.size(); i++) {
 		data[i][0] = vect[i];
 	}
 	return Matrix(data);
@@ -134,10 +134,10 @@ vector<double> Matrix::MultiplyMatrixByVector(const Matrix& MatrixA, const vecto
 		throw invalid_argument("The matrix with bias cannot be multiplied by vector of this size");
 	}
 	vector<double> data(MatrixA.rows);
-	int rowA;
+	size_t rowA;
 #pragma omp parallel for
 	for (rowA = 0; rowA < MatrixA.rows; rowA++) {
-		for (int colA_rowB = 0; colA_rowB < VectorB.size(); colA_rowB++) {
+		for (size_t colA_rowB = 0; colA_rowB < VectorB.size(); colA_rowB++) {
 			data[rowA] += MatrixA.data[rowA][colA_rowB] * VectorB[colA_rowB];
 		}
 		if (addBias) {
@@ -155,12 +155,12 @@ Matrix Matrix::MultiplyVectors(const vector<double>& VectorA, const vector<doubl
 	VectorB							:	vector multiplying
 	addBias							:	whether to extend VectorB by 1 (due to bias), default is false
 	*/
-	int cols = VectorB.size() + (int)addBias;
+	size_t cols = VectorB.size() + (int)addBias;
 	Matrix newMatrix = Matrix(vector<vector<double>>(VectorA.size(), vector<double>(cols)));
-	int row;
+	size_t row;
 #pragma omp parallel for
 	for (row = 0; row < VectorA.size(); row++) {
-		for (int col = 0; col < VectorB.size(); col++) {
+		for (size_t col = 0; col < VectorB.size(); col++) {
 			newMatrix.data[row][col] = VectorA[row] * VectorB[col];
 		}
 		if (addBias) {
@@ -176,9 +176,9 @@ Matrix Matrix::RandomMatrixSetSize(size_t rows, size_t cols, double variance) {
 	used for weights initialization
 	*/
 	vector<vector<double>> data;
-	for (int i = 0; i < rows; i++) {
+	for (size_t i = 0; i < rows; i++) {
 		vector<double> tmp;
-		for (int j = 0; j < cols; j++) {
+		for (size_t j = 0; j < cols; j++) {
 			double randNum = normalRandom();
 			tmp.push_back(randNum * variance);
 		}

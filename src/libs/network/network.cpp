@@ -13,9 +13,9 @@ double getVariance(size_t n, size_t m, int weightInitMethod) {
 	returns variance
 	*/
 	if (weightInitMethod == INIT_XAV)
-		return sqrt(1.0 / n);
+		return sqrt(1.0 / (double)n);
 	if (weightInitMethod == INIT_HE)
-		return sqrt(2.0 / n);
+		return sqrt(2.0 / (double)n);
 	return 1;
 }
 
@@ -39,7 +39,7 @@ void activationFunc(const vector<double>& inVect, vector<double>& outVec, int ac
 	}
 }
 
-vector<vector<double>> computeDeltas(const vector<vector<double>>& nonStaticNeuronPotentials, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int label) {
+void computeDeltas(const vector<vector<double>>& nonStaticNeuronPotentials, const vector<double>& outputNeuronOutputs, const vector<Matrix>& weights, vector<vector<double>>& deltas, int label) {
 	/*
 	delta is a derivative of the error function w.r.t the inner potential (dE/dy * o'(inner_potential))
 	creates a 2D matrix of deltas; one value for each neuron
@@ -49,17 +49,18 @@ vector<vector<double>> computeDeltas(const vector<vector<double>>& nonStaticNeur
 	weights									:		weights between all neurons in adjacent layers
 	label									:		label for this training example
 	*/
-	vector<vector<double>> deltas(nonStaticNeuronOutputs);
+	deltas.back() = outputNeuronOutputs;
 	deltas.back()[label] -= 1; // delta for the output layer, works only for softmax with cross entropy
 
-	for (int layerIndex = nonStaticNeuronOutputs.size() - 2; layerIndex >= 0; layerIndex--) { // TODO: compare with the size of something else
+	for (size_t i = 0; i < nonStaticNeuronPotentials.size() - 1; i++) {
+		size_t layerIndex = nonStaticNeuronPotentials.size() - 2 - i; // index of the layer we're computing deltas for
 		Matrix weightsTransposed = Matrix::Transpose(weights[layerIndex + 1], true);
 		deltas[layerIndex] = Matrix::MultiplyMatrixByVector(weightsTransposed, deltas[layerIndex + 1]);
-		for (int neuronIndex = 0; neuronIndex < deltas[layerIndex].size(); neuronIndex++) {
+		for (size_t neuronIndex = 0; neuronIndex < deltas[layerIndex].size(); neuronIndex++) {
 			deltas[layerIndex][neuronIndex] = nonStaticNeuronPotentials[layerIndex][neuronIndex] > 0 ? deltas[layerIndex][neuronIndex] : 0; // ReLU derivation (1 for x > 0; 0 otherwise)
 		}
 	}
-	return deltas;
+	return;
 }
 
 void computeWeightChange(vector<Matrix>& weightChangeSum, const vector<double>& inputVector, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<vector<double>>& deltas) {
@@ -72,7 +73,7 @@ void computeWeightChange(vector<Matrix>& weightChangeSum, const vector<double>& 
 	nonStaticNeuronOutputs					:		neuron outputs of the hidden + output layers
 	deltas									:		deltas from computeDeltas
 	*/
-	int layerIndex;
+	size_t layerIndex;
 #pragma omp parallel for
 	for (layerIndex = 0; layerIndex < weightChangeSum.size(); layerIndex++) {
 		const vector<double>* neuronOutputs = &inputVector;
@@ -154,7 +155,7 @@ double evaluateNetworkAccuracy(const Matrix& testDataVectors, const Matrix& test
 		if (vecToScalar(nonStaticNeuronOutputs.back()) == label)
 			correct++;
 	}
-	return (correct / (testDataVectors.rows - TESTING_OFFSET));
+	return (double)(correct / (testDataVectors.rows - TESTING_OFFSET));
 }
 
 void forwardPass(const vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials,

@@ -23,7 +23,7 @@ const string OPTIMIZER = "RMS"; // TODO: use enums instead of strings
 
 double learningRate = 0.001;
 size_t epochs = 70;
-size_t threads = 8;
+int threads = 8;
 
 //------------------------------------------------------------
 
@@ -67,6 +67,7 @@ int main(int argc, char** argv)
 	}
 
 	vector<vector<double>> nonStaticNeuronLayersOutputs(nonStaticNeuronLayersPotentials); // potentials after applying activation function
+	vector<vector<double>> deltas(nonStaticNeuronLayersPotentials); // deltas for backpropagation, see computeDeltas()
 
 	vector<Matrix> weights = initWeights(layersNeuronCount, INIT_HE); // initialize weights
 
@@ -117,10 +118,10 @@ int main(int argc, char** argv)
 			}
 			for (size_t batchNum = 0; batchNum < BATCH_SIZE; batchNum++) {
 				vector<double>& trainingExample = trainDataVectors.data[shuffleMap[trainingExampleOffset + batchNum]];
-				int label = trainDataLabels.data[shuffleMap[trainingExampleOffset + batchNum]][0];
+				int label = (int)trainDataLabels.data[shuffleMap[trainingExampleOffset + batchNum]][0];
 
 				forwardPass(trainingExample, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
-				vector<vector<double>> deltas = computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, label);
+				computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs.back(), weights, deltas, label);
 				computeWeightChange(weightChangeSum, trainingExample, nonStaticNeuronLayersOutputs, deltas);
 			}
 			updateWeights(weightChangeSum, weights, BATCH_SIZE, learningRate, params);

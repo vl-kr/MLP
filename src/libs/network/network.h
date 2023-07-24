@@ -14,23 +14,8 @@
 
 using namespace std;
 
-class network {
-public:
-	int weightInitMethod = INIT_HE;
-	size_t batchSize = 32;
-	size_t evaluationSetSizePercentage = 20;
-	size_t epochs = 10;
-	const vector<size_t> hiddenLayersNeuronCount = { 10 };
-	Matrix trainDataVectors;
-	Matrix trainDataLabels;
-	size_t trainDataRows;
-	size_t trainDataCols;
-	static int evaluationOffset;
-};
-
-
 void forwardPass(const vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType);
-vector<vector<double>> computeDeltas(const vector<vector<double>>& nonStaticNeuronPotentials, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int label);
+void computeDeltas(const vector<vector<double>>& nonStaticNeuronPotentials, const vector<double>& outputNeuronOutputs, const vector<Matrix>& weights, vector<vector<double>>& deltas, int label);
 void computeWeightChange(vector<Matrix>& weightChangeSum, const vector<double>& inputVector, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<vector<double>>& deltas);
 void updateWeights(const vector<Matrix>& weightChangeSum, vector<Matrix>& weights, size_t batchSize, double learningRate, vector<vector<double>>& params);
 

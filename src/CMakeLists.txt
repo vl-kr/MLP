@@ -1,7 +1,7 @@
 ﻿# CMakeList.txt : CMake project for main, include source and define
 # project specific logic here.
 #
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.9)
 
 project ("main")
 
@@ -26,6 +26,12 @@ add_executable (main
  
  "libs/util/util.cpp" 
  "libs/util/util.h")
+
+ if (MSVC)
+    target_compile_options(main PRIVATE
+        /openmp:llvm
+    )
+endif()
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX)
