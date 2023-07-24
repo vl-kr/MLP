@@ -39,7 +39,7 @@ void activationFunc(const vector<double>& inVect, vector<double>& outVec, int ac
 	}
 }
 
-void computeDeltas(const vector<vector<double>>& nonStaticNeuronPotentials, const vector<double>& outputNeuronOutputs, const vector<Matrix>& weights, vector<vector<double>>& deltas, int label) {
+void computeDeltas(const vector<Matrix>& weights, const vector<vector<double>>& nonStaticNeuronPotentials, const vector<double>& outputNeuronOutputs, vector<vector<double>>& deltas, int label) {
 	/*
 	delta is a derivative of the error function w.r.t the inner potential (dE/dy * o'(inner_potential))
 	creates a 2D matrix of deltas; one value for each neuron
@@ -63,7 +63,7 @@ void computeDeltas(const vector<vector<double>>& nonStaticNeuronPotentials, cons
 	return;
 }
 
-void computeWeightChange(vector<Matrix>& weightChangeSum, const vector<double>& inputVector, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<vector<double>>& deltas) {
+void computeWeightChange(const vector<double>& inputVector, vector<Matrix>& weightChangeSum, const vector<vector<double>>& nonStaticNeuronOutputs, const vector<vector<double>>& deltas) {
 	/*
 	multiplies deltas with neuron outputs to get dE/dw
 	resulting values accumulate over each batch
@@ -85,7 +85,7 @@ void computeWeightChange(vector<Matrix>& weightChangeSum, const vector<double>& 
 	}
 }
 
-void updateWeights(const vector<Matrix>& weightChangeSum, vector<Matrix>& weights, size_t batchSize, double learningRate, vector<vector<double>>& params) {
+void updateWeights(vector<Matrix>& weights, const vector<Matrix>& weightChangeSum, size_t batchSize, double learningRate, vector<vector<double>>& params) {
 	/*
 	updates weights and applies some optimizations (most of them are commented out to save time)
 
@@ -111,8 +111,8 @@ void updateWeights(const vector<Matrix>& weightChangeSum, vector<Matrix>& weight
 	}
 }
 
-double evaluateNetworkError(const Matrix& testDataVectors, const Matrix& testDataLabels, size_t TESTING_OFFSET, vector<vector<double>>& nonStaticNeuronPotentials, 
-	vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType) {
+double evaluateNetworkError(const Matrix& testDataVectors, const Matrix& testDataLabels, const vector<Matrix>& weights, vector<vector<double>>& nonStaticNeuronPotentials,
+	vector<vector<double>>& nonStaticNeuronOutputs, int activationFuncType, size_t TESTING_OFFSET) {
 	/*
 	computes average loss for trainig examples after TESTING_OFFSET
 
@@ -127,7 +127,7 @@ double evaluateNetworkError(const Matrix& testDataVectors, const Matrix& testDat
 	double errorSum = 0;
 	for (size_t i = TESTING_OFFSET; i < testDataVectors.rows; i++) {
 		int label = testDataLabels.data[i][0];
-		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, activationFuncType);
+		forwardPass(testDataVectors.data[i], weights, nonStaticNeuronPotentials, nonStaticNeuronOutputs, activationFuncType);
 		double outputOfCorrectNeuron = nonStaticNeuronOutputs[nonStaticNeuronOutputs.size() - 1][label];
 		double loss = log(outputOfCorrectNeuron); // cross entropy
 		errorSum += loss;
@@ -135,8 +135,8 @@ double evaluateNetworkError(const Matrix& testDataVectors, const Matrix& testDat
 	return -(1.0 / (testDataVectors.rows - TESTING_OFFSET)) * errorSum;
 }
 
-double evaluateNetworkAccuracy(const Matrix& testDataVectors, const Matrix& testDataLabels, size_t TESTING_OFFSET,
-	vector<vector<double>>& nonStaticNeuronPotentials, vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType) {
+double evaluateNetworkAccuracy(const Matrix& testDataVectors, const Matrix& testDataLabels, const vector<Matrix>& weights, vector<vector<double>>& nonStaticNeuronPotentials,
+	vector<vector<double>>& nonStaticNeuronOutputs, int activationFuncType, size_t TESTING_OFFSET) {
 	/*
 	computes accuracy for trainig examples after TESTING_OFFSET
 
@@ -151,15 +151,15 @@ double evaluateNetworkAccuracy(const Matrix& testDataVectors, const Matrix& test
 	double correct = 0;
 	for (size_t i = TESTING_OFFSET; i < testDataVectors.rows; i++) {
 		int label = testDataLabels.data[i][0];
-		forwardPass(testDataVectors.data[i], nonStaticNeuronPotentials, nonStaticNeuronOutputs, weights, activationFuncType);
+		forwardPass(testDataVectors.data[i], weights, nonStaticNeuronPotentials, nonStaticNeuronOutputs, activationFuncType);
 		if (vecToScalar(nonStaticNeuronOutputs.back()) == label)
 			correct++;
 	}
 	return (double)(correct / (testDataVectors.rows - TESTING_OFFSET));
 }
 
-void forwardPass(const vector<double>& inputNeurons, vector<vector<double>>& nonStaticNeuronPotentials,
-	vector<vector<double>>& nonStaticNeuronOutputs, const vector<Matrix>& weights, int activationFuncType) {
+void forwardPass(const vector<double>& inputNeurons, const vector<Matrix>& weights, vector<vector<double>>& nonStaticNeuronPotentials,
+	vector<vector<double>>& nonStaticNeuronOutputs, int activationFuncType) {
 	/*
 	performs forward pass for a single example, returns cross entropy loss
 

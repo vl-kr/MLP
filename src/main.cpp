@@ -92,8 +92,8 @@ int main(int argc, char** argv)
 
 		cout << "Epoch: " << epochCounter << endl;
 
-		error = evaluateNetworkError(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
-		accuracy = evaluateNetworkAccuracy(trainDataVectors, trainDataLabels, evaluationOffset, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
+		error = evaluateNetworkError(trainDataVectors, trainDataLabels, weights, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, ACT_ReLU, evaluationOffset);
+		accuracy = evaluateNetworkAccuracy(trainDataVectors, trainDataLabels, weights, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, ACT_ReLU, evaluationOffset);
 
 		if (accuracy > 0.86) { // adaptive learning rate
 			learningRate = 0.0001;
@@ -120,11 +120,11 @@ int main(int argc, char** argv)
 				vector<double>& trainingExample = trainDataVectors.data[shuffleMap[trainingExampleOffset + batchNum]];
 				int label = (int)trainDataLabels.data[shuffleMap[trainingExampleOffset + batchNum]][0];
 
-				forwardPass(trainingExample, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
-				computeDeltas(nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs.back(), weights, deltas, label);
-				computeWeightChange(weightChangeSum, trainingExample, nonStaticNeuronLayersOutputs, deltas);
+				forwardPass(trainingExample, weights, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, ACT_ReLU);
+				computeDeltas(weights, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs.back(), deltas, label);
+				computeWeightChange(trainingExample, weightChangeSum, nonStaticNeuronLayersOutputs, deltas);
 			}
-			updateWeights(weightChangeSum, weights, BATCH_SIZE, learningRate, params);
+			updateWeights(weights, weightChangeSum, BATCH_SIZE, learningRate, params);
 		}
 		shuffle(shuffleMap.begin(), shuffleMap.end(), random_device());
 		epochTimerEnd = high_resolution_clock::now();
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
 	vector<double> outLabels;
 
 	for (auto& inputVector : testDataVectors.data) {
-		forwardPass(inputVector, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, weights, ACT_ReLU);
+		forwardPass(inputVector, weights, nonStaticNeuronLayersPotentials, nonStaticNeuronLayersOutputs, ACT_ReLU);
 		outLabels.push_back(vecToScalar(nonStaticNeuronLayersOutputs.back()));
 	}
 
