@@ -15,6 +15,8 @@ public:
 
 	std::vector<std::vector<double>> data;
 
+	Matrix();
+
 	Matrix(std::vector<std::vector<double>> data);
 
 	void PrintMatrix();

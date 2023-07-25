@@ -43,8 +43,19 @@ int main(int argc, char** argv)
 	cout << OUTPUT_LAYER_SIZE << "] ";
 	cout << " Learning rate: " << learningRate << " Batch size: " << BATCH_SIZE << " decay: " << WEIGHT_DECAY << endl;
 
-	Matrix trainDataVectors = loadFromCSV("data/fashion_mnist_train_vectors.csv", NORMALIZATION_FACTOR); // dividing by NORMALIZATION_FACTOR
-	Matrix trainDataLabels = loadFromCSV("data/fashion_mnist_train_labels.csv");
+	Matrix trainDataVectors;
+	Matrix trainDataLabels;
+
+	try
+	{
+		trainDataVectors = loadFromCSV("data/fashion_mnist_train_vectors.csv", NORMALIZATION_FACTOR); // dividing by NORMALIZATION_FACTOR
+		trainDataLabels = loadFromCSV("data/fashion_mnist_train_labels.csv");
+	}
+	catch (const exception& ex)
+	{
+		cerr << "Error loading training data: " << ex.what() << endl;
+		exit(1);
+	}
 
 	size_t trainDataRows = trainDataVectors.data.size();
 	size_t trainDataCols = trainDataVectors.data[0].size();

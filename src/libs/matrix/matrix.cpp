@@ -23,6 +23,11 @@ double normalRandom() {
 	return cos(2 * pi * rand1) * sqrt(-2.0 * log(rand2)); // Box–Muller transform
 }
 
+Matrix::Matrix() {
+	this->rows = 0;
+	this->cols = 0;
+}
+
 Matrix::Matrix(vector<vector<double>> data) {
 	assert(data.size() > 0);
 	this->data = move(data);
