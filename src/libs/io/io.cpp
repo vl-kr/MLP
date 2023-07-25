@@ -11,8 +11,7 @@ Matrix loadFromCSV(string inFilePath, int normalizationDivisor) {
 	ifstream inFile(inFilePath);
 	cout << "Attempting to open file: " << inFilePath << endl;
 	if (!inFile.is_open()) {
-		cout << "File could not be opened" << endl;
-		exit(1); // TODO: change this to throw an exception
+		throw runtime_error("Could not open file: " + inFilePath);
 	}
 
 	string line;
