@@ -74,7 +74,6 @@ void computeWeightChange(const vector<double>& inputVector, vector<Matrix>& weig
 	deltas									:		deltas from computeDeltas
 	*/
 	size_t layerIndex;
-#pragma omp parallel for
 	for (layerIndex = 0; layerIndex < weightChangeSum.size(); layerIndex++) {
 		const vector<double>* neuronOutputs = &inputVector;
 		if (layerIndex > 0) {

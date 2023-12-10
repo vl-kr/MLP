@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 	if (argc > 2) { // default values are used if no arguments are passed
 		threads = stoi(argv[1]);
 	}
-	omp_set_num_threads(threads);
+	omp_set_num_threads(threads); // openmp not used currently
 
 	cout << "Architecture: [";
 	for (auto val : HIDDEN_LAYERS_NEURON_COUNT) {
