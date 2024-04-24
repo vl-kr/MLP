@@ -10,3 +10,4 @@
 #include <random>
 #include <numeric>
 #include <chrono>
+#include <algorithm>

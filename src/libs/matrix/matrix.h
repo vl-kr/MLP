@@ -4,7 +4,7 @@
 #include <vector>
 #include <cassert>
 #include <omp.h>
-
+#include <math.h>
 
 class Matrix
 {
