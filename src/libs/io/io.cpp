@@ -20,7 +20,7 @@ Matrix loadFromCSV(string inFilePath, int normalizationDivisor) {
 
 	// Get the number of lines and columns in the file
 	getline(inFile, line);
-	//numCols = count(line.begin(), line.end(), ',') + 1;
+	numCols = count(line.begin(), line.end(), ',') + 1;
 	numLines = count(istreambuf_iterator<char>(inFile), istreambuf_iterator<char>(), '\n') + 1;
 
 	inFile.clear();  // Clear the end-of-file flag
